@@ -93,6 +93,8 @@ export const publicApi = {
     getNgos: async () => (await api.get('/public/ngos')).data,
     getNgoById: async (id) => (await api.get(`/ngos/${id}`)).data,
     getNeeds: async () => (await api.get('/public/needs')).data,
+    getNeedById: async (id) => (await api.get(`/public/needs/${id}`)).data,
+    getCampaignById: async (id) => (await api.get(`/public/campaigns/${id}`)).data,
     getAuditLogs: async () => (await api.get('/public/audit-logs')).data,
     getStories: async () => (await api.get('/public/impact-stories')).data
 };

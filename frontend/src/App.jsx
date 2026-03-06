@@ -10,15 +10,15 @@ import Navbar from './components/layout/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
-import NgoDashboard from './pages/NgoDashboard';
+import NgoDashboard from './pages/NGODashboard';
 import NgoOnboarding from './components/onboarding/NgoOnboarding';
 import DonorOnboarding from './pages/donors/DonorOnboarding';
 import DonorExplore from './pages/donors/DonorExplore';
 import DonorDashboard from './pages/donors/DonorDashboard';
 import TransparencyLedger from './pages/TransparencyLedger';
 import ImpactFeed from './pages/ImpactFeed';
+import ProjectDetails from './pages/ProjectDetails';
 import NgoDetails from './pages/NgoDetails';
-
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
@@ -71,6 +71,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <NgoDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/project/:type/:id"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <ProjectDetails />
                 </ProtectedRoute>
               }
             />
