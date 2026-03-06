@@ -5,7 +5,7 @@ const generateToken = require('../utils/generateToken');
 
 exports.login = async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, password } = req.body;
         const normalizedEmail = email.trim().toLowerCase();
 
         // 1. Check if Admin (New separate collection)
@@ -28,7 +28,13 @@ exports.login = async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found. Please register first.' });
         }
 
-        generateToken(res, user._id, role);
+        // Check password
+        const isMatch = await user.matchPassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+        }
+
+        generateToken(req, res, user._id, role);
 
         res.status(200).json({
             success: true,

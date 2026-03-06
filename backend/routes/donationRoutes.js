@@ -4,7 +4,7 @@ const donationController = require('../controllers/donationController');
 
 const { protect } = require('../middleware/authMiddleware');
 
-router.get('/suggest', protect, donationController.suggestSplit);
+router.post('/suggest', protect, donationController.suggestSplit);
 router.get('/my-donations', protect, donationController.getMyDonations);
 router.post('/initiate', protect, donationController.initiateDonation);
 router.post('/verify', protect, donationController.verifyPayment);

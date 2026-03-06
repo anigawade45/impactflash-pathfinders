@@ -16,6 +16,7 @@ export default function NgoOnboarding() {
         ngoId: '',
         name: '',
         email: '',
+        password: '',
         registrationNumber: '',
         isFcraRegistered: false,
         fcraNumber: '',
@@ -81,6 +82,7 @@ export default function NgoOnboarding() {
             data.append('ngoId', formData.ngoId);
             data.append('name', formData.name);
             data.append('email', formData.email);
+            data.append('password', formData.password);
             data.append('registrationNumber', formData.registrationNumber);
             data.append('isFcraRegistered', formData.isFcraRegistered);
             if (formData.isFcraRegistered) {
@@ -189,6 +191,11 @@ export default function NgoOnboarding() {
                             <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all shadow-sm text-slate-900 placeholder-slate-400" placeholder="contact@charity.org" />
                         </div>
 
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">Secure Password</label>
+                            <input required type="password" name="password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all shadow-sm text-slate-900 placeholder-slate-400" placeholder="••••••••" />
+                        </div>
+
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                             <div className="flex items-center justify-between mb-4">
                                 <label className="text-sm font-semibold text-slate-700">Is FCRA Registered?</label>
@@ -265,8 +272,8 @@ export default function NgoOnboarding() {
                                     onClick={handleVerifyPan}
                                     disabled={verifyingPan || isPanVerified || !formData.panCard}
                                     className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isPanVerified
-                                            ? 'bg-green-600 text-white cursor-default'
-                                            : 'bg-slate-900 text-white hover:bg-black disabled:bg-slate-200 disabled:text-slate-400'
+                                        ? 'bg-green-600 text-white cursor-default'
+                                        : 'bg-slate-900 text-white hover:bg-black disabled:bg-slate-200 disabled:text-slate-400'
                                         }`}
                                 >
                                     {verifyingPan ? 'Verifying...' : isPanVerified ? 'Verified ✓' : 'Verify PAN'}

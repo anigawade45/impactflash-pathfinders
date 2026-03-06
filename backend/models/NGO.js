@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const ngoSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
     role: { type: String, enum: ['ngo'], default: 'ngo' },
     ngoId: { type: String, required: true, unique: true },
     registrationNumber: { type: String, required: true, unique: true },
@@ -27,6 +29,7 @@ const ngoSchema = new mongoose.Schema({
         default: 'pending'
     },
     trustScore: { type: Number, default: 0, min: 0, max: 100 },
+    impactScore: { type: Number, default: 0, min: 0, max: 100 },
     suspensionReason: { type: String },
     aiVerdict: { type: String },
     aiWhyHigh: { type: String },
@@ -50,5 +53,15 @@ const ngoSchema = new mongoose.Schema({
     },
     lastReviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' }
 }, { timestamps: true });
+
+ngoSchema.pre('save', async function () {
+    if (!this.isModified('password')) return;
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+});
+
+ngoSchema.methods.matchPassword = async function (enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
+};
 
 module.exports = mongoose.model('NGO', ngoSchema);

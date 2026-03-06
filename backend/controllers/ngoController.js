@@ -1,4 +1,6 @@
 const NGO = require('../models/NGO');
+const Donor = require('../models/Donor');
+const Admin = require('../models/Admin');
 const generateToken = require('../utils/generateToken');
 const axios = require('axios');
 
@@ -6,7 +8,7 @@ const AI_ENGINE_URL = 'http://127.0.0.1:8000/api';
 
 exports.registerNgo = async (req, res) => {
     try {
-        let { ngoId, name, email, registrationNumber, isFcraRegistered, fcraNumber, panCard, address, website, workingAreas, bankAccount, representative } = req.body;
+        let { ngoId, name, email, password, registrationNumber, isFcraRegistered, fcraNumber, panCard, address, website, workingAreas, bankAccount, representative } = req.body;
         const normalizedEmail = email.trim().toLowerCase();
 
         // If data is sent as multi-part form data, these objects might arrive as strings
@@ -19,11 +21,20 @@ exports.registerNgo = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Registration certificate is required.' });
         }
 
+        const existingNgo = await NGO.findOne({ email: normalizedEmail });
+        const existingDonor = await Donor.findOne({ email: normalizedEmail });
+        const existingAdmin = await Admin.findOne({ email: normalizedEmail });
+
+        if (existingNgo || existingDonor || existingAdmin) {
+            return res.status(400).json({ success: false, message: 'This email is already registered on the platform.' });
+        }
+
         // 1. Create initial NGO record
         const newNgo = new NGO({
             ngoId,
             name,
             email: normalizedEmail,
+            password,
             registrationNumber,
             isFcraRegistered: isFcraRegistered === 'true' || isFcraRegistered === true,
             fcraNumber,
@@ -104,7 +115,7 @@ exports.registerNgo = async (req, res) => {
         await newNgo.save();
 
         // Generate token and set cookie
-        generateToken(res, newNgo._id, newNgo.role);
+        generateToken(req, res, newNgo._id, newNgo.role);
 
         res.status(201).json({
             success: true,

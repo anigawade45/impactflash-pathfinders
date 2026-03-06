@@ -5,6 +5,8 @@ const donationSchema = new mongoose.Schema({
     items: [{
         targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
         targetType: { type: String, enum: ['Need', 'Campaign'], required: true },
+        title: { type: String },
+        category: { type: String },
         amount: { type: Number, required: true },
         ngoId: { type: mongoose.Schema.Types.ObjectId, ref: 'NGO', required: true }
     }],
