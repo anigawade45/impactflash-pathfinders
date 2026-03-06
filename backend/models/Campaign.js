@@ -8,8 +8,11 @@ const campaignSchema = new mongoose.Schema({
     emotionalAppeal: { type: String, required: true },
     targetAmount: { type: Number, required: true },
     photos: [{ type: String }],
+    documents: [{ type: String }], // Layer 1: Registration or specific proof
+    deadline: { type: Date, required: true }, // Max 15 days for immediate fundraising
     aiScore: { type: Number, default: 0 },
     fraudFlag: { type: Boolean, default: false },
+    visionAuthentic: { type: Boolean, default: false },
     explanation: { type: String },
     aiVerdict: { type: String },
     aiWhyHigh: { type: String },
@@ -17,6 +20,7 @@ const campaignSchema = new mongoose.Schema({
     aiFraudStatus: { type: String },
     aiOneFlag: { type: String },
     aiSuggestion: { type: String },
+    aiRecommendationPoints: [{ type: String }],
     isSpotCheck: { type: Boolean, default: false }, // Layer 4: 5% random check
     lastReviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     approvals: [

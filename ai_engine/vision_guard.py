@@ -118,6 +118,109 @@ class VisionGuard:
             print(f"[VISION_GUARD] ❌ Gemini Error: {e}")
             return self._simulate_verification(image_url, doc_type, fallback=True)
 
+    def verify_need_document(self, image_url, need_title=None):
+        """
+        Logic for Layer 2: Need Verification
+        Verify if the document (invoice, proforma, letter) matches the need.
+        """
+        print(f"\n[VISION_GUARD] 🔍 INITIALIZING LAYER 2 NEED VETTING: {need_title}")
+        
+        if not HAS_GEMINI:
+            return self._simulate_need_verification(image_url, need_title)
+
+        image_data = self._download_image(image_url)
+        if not image_data:
+            return {"isAuthentic": False, "analysis": "INVALID_SOURCE: Image unreachable.", "confidence": 0}
+
+        prompt = f"""
+        Analyze this image submitted as a supporting document for an NGO's immediate need: "{need_title}".
+        Determine:
+        1. Document Type: Is this an invoice, a quotation, a letter of request, or a proforma?
+        2. Relevance: Does the content of the document (items listed, total amount, purpose) align with the need "{need_title}"?
+        3. Authenticity: Does it look like a real document? check for headers, dates, and consistency.
+
+        Return the result strictly as a JSON object:
+        {{
+            "isAuthentic": boolean,
+            "confidence": float (0-1),
+            "analysis": "string overview",
+            "visionAuthentic": boolean,
+            "matchConfidence": float (0-1),
+            "recommendation_points": ["point 1", "point 2", ...]
+        }}
+        """
+
+        try:
+            contents = [
+                {"mime_type": "image/jpeg", "data": image_data},
+                prompt
+            ]
+            response = self.model.generate_content(contents)
+            text = response.text.replace('```json', '').replace('```', '').strip()
+            result = json.loads(text)
+            return result
+        except Exception as e:
+            print(f"[VISION_GUARD] ❌ Gemini Error: {e}")
+            return self._simulate_need_verification(image_url, need_title)
+
+    def verify_campaign_document(self, image_url, campaign_title=None):
+        """
+        Logic for Layer 2: Campaign Verification
+        Verify if the document or photo matches the immediate fundraising campaign.
+        """
+        print(f"\n[VISION_GUARD] 🔍 INITIALIZING LAYER 2 CAMPAIGN VETTING: {campaign_title}")
+        
+        if not HAS_GEMINI:
+            return self._simulate_campaign_verification(image_url, campaign_title)
+
+        image_data = self._download_image(image_url)
+        if not image_data:
+            return {"isAuthentic": False, "analysis": "INVALID_SOURCE: Image unreachable.", "confidence": 0}
+
+        prompt = f"""
+        Analyze this image submitted as proof/justification for an NGO's immediate fundraising campaign: "{campaign_title}".
+        Immediate fundraising campaigns are usually for urgent needs like accidents, medical emergencies, or disaster relief.
+        
+        Determine:
+        1. Context: Does the image show evidence of the need (e.g., hospital bill, accident photo, damage, official request)?
+        2. Relevance: Does the content align with the campaign title "{campaign_title}"?
+        3. Authenticity: Does it look like a real, unique photo or document (not a stock image or recycled internet photo)?
+
+        Return the result strictly as a JSON object:
+        {{
+            "isAuthentic": boolean,
+            "confidence": float (0-1),
+            "analysis": "string overview of findings",
+            "visionAuthentic": boolean,
+            "matchConfidence": float (0-1),
+            "recommendation_points": ["point 1", "point 2", ...]
+        }}
+        """
+
+        try:
+            contents = [
+                {"mime_type": "image/jpeg", "data": image_data},
+                prompt
+            ]
+            response = self.model.generate_content(contents)
+            text = response.text.replace('```json', '').replace('```', '').strip()
+            result = json.loads(text)
+            return result
+        except Exception as e:
+            print(f"[VISION_GUARD] ❌ Gemini Error: {e}")
+            return self._simulate_campaign_verification(image_url, campaign_title)
+
+    def _simulate_campaign_verification(self, image_url, campaign_title=None):
+        is_fake = any(x in image_url.lower() for x in ["stock", "placeholder", "fake", "dummy"])
+        return {
+            "isAuthentic": not is_fake,
+            "confidence": 0.9 if not is_fake else 0.1,
+            "analysis": f"Simulated: Image/Proof matches campaign '{campaign_title}'" if not is_fake else "Simulated: Potential stock image or irrelevant proof detected.",
+            "visionAuthentic": not is_fake,
+            "matchConfidence": 0.9 if not is_fake else 0.05,
+            "recommendation_points": ["High relevance found" if not is_fake else "Stock image detected", "Context matches campaign title"]
+        }
+
     def verify_impact_proof(self, image_url):
         """
         Logic for Layer 4/5: Milestone Fund Release
@@ -176,6 +279,16 @@ class VisionGuard:
                 "watermark_presence": "DETECTED",
                 "pixel_shading": "CONSISTENT"
             }
+        }
+
+    def _simulate_need_verification(self, image_url, need_title=None):
+        is_fake = any(x in image_url.lower() for x in ["stock", "placeholder", "fake"])
+        return {
+            "isAuthentic": not is_fake,
+            "confidence": 0.95 if not is_fake else 0.1,
+            "analysis": f"Simulated: Document matches need '{need_title}'" if not is_fake else "Simulated: Generic or non-document image detected.",
+            "visionAuthentic": not is_fake,
+            "matchConfidence": 0.95 if not is_fake else 0.05
         }
 
     def _simulate_proof_verification(self, image_url):

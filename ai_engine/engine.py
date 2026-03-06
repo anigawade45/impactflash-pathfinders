@@ -50,6 +50,15 @@ class ImpactEngine:
         Calculates Priority Score using 22 simulated features.
         Implements Urgency, Need Size, Impact, and Deadline buckets.
         """
+        # --- 0. Vision Pre-check (Layer 2 - VisionGuard) ---
+        img_url = data.get('image_url')
+        vision_result = None
+        if img_url:
+            if data.get('type') == 'need':
+                vision_result = vision_guard.verify_need_document(img_url, data.get('title'))
+            elif data.get('type') == 'campaign':
+                vision_result = vision_guard.verify_campaign_document(img_url, data.get('title'))
+
         # --- 1. Base Score calculation (Arithmetic Layer) ---
         base_score = 0
         pos_reasons = []
@@ -83,49 +92,58 @@ class ImpactEngine:
             pos_reasons.append(f"Deadline pressure (+{deadline_points})")
 
         # --- 2. Multipliers (Category Weight) ---
+        # Update weights to handle potential user-defined categories
         category = str(data.get('category', 'Social')).capitalize()
         weights = {
             'Disaster': 1.25, 'Health': 1.20, 'Food': 1.15, 
-            'Children': 1.10, 'Education': 1.00, 'Women': 1.00,
-            'Social': 0.95, 'Environment': 0.90
+            'Children': 1.10, 'Education': 1.05, 'Women': 1.05,
+            'Social': 0.95, 'Environment': 0.90, 'Animal': 0.85
         }
         multiplier = weights.get(category, 1.0)
         final_score = base_score * multiplier
         if multiplier > 1.0:
             pos_reasons.append(f"{category} category weight (x{multiplier})")
 
-        # --- 3. Bonuses & Penalties ---
-        has_doc = data.get('registrationCertificate') is not None
-        if has_doc:
-            final_score += 3
-            pos_reasons.append("Document verified (+3)")
+        # --- 3. Bonuses & Penalties (AI Document Verification Impact) ---
+        is_authentic = vision_result.get("isAuthentic", False) if vision_result else False
+        
+        if img_url:
+            if is_authentic:
+                final_score += 15
+                pos_reasons.append("Evidence verified via VisionGuard (+15)")
+            else:
+                final_score -= 10
+                neg_reasons.append("Evidence flagged by VisionGuard (-10)")
         else:
             final_score -= 15
-            neg_reasons.append("No document submitted (-15)")
+            neg_reasons.append("No supporting document (-15)")
             if urgency == 'high':
                 one_flag = "High urgency without supporting document"
 
         # --- 4. Fraud & Anomaly (Isolation Forest & Heuristics) ---
-        # [amount, frequency, similarity]
         fraud_features = np.array([[amount, 1, 0.5]])
         is_anomaly = self.iso_forest.predict(fraud_features)[0] == -1
         
-        # Simulated Heuristic for "Amount Spike" (e.g. > 2.5x of a typical small NGO request)
         if amount > 250000:
             is_anomaly = True
             one_flag = "XGBoost detected non-linear anomaly: 2.7x amount spike vs historical baseline"
 
-        if urgency == 'high' and not has_doc:
+        if urgency == 'high' and not img_url:
             is_anomaly = True
             one_flag = "High-risk pattern: Immediate urgency requested without supporting documentation"
         
+        # If VisionGuard says it's definitely fake, it's an anomaly
+        if img_url and not is_authentic and vision_result.get("confidence", 0) > 0.8:
+            is_anomaly = True
+            one_flag = "Vision Analysis: High confidence of document tampering or irrelevance"
+
         # --- 5. Final Verdict Logic ---
         final_score = min(max(round(final_score), 0), 100)
         
         verdict = "APPROVED (auto)" if final_score >= 75 and not is_anomaly else "PENDING (review)"
-        if is_anomaly: verdict = "FLAGGED (fraud risk)"
+        if is_anomaly: verdict = "FLAGGED (risk detected)"
 
-        suggestion = f"If you add a document: estimated score -> {min(final_score + 18, 100)}" if not has_doc else "Maintain high fulfillment for score bonuses."
+        suggestion = vision_result.get("analysis", "") if vision_result else (f"If you add a document: estimated score -> {min(final_score + 18, 100)}" if not img_url else "Ensure document clarity for vision processing.")
 
         return {
             "score": final_score,
@@ -136,7 +154,9 @@ class ImpactEngine:
             "isolation_forest": "Anomaly detected" if is_anomaly else "Normal pattern",
             "one_flag": one_flag or "Optimal pattern matches benchmark",
             "suggestion": suggestion,
-            "fraudFlag": bool(is_anomaly)
+            "fraudFlag": bool(is_anomaly),
+            "visionAuthentic": is_authentic,
+            "aiRecommendationPoints": vision_result.get("recommendation_points", []) if vision_result else []
         }
 
     def suggest_optimal_split(self, donation_amount, candidates):
