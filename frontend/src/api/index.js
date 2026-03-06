@@ -93,12 +93,14 @@ export const publicApi = {
     getNgos: async () => (await api.get('/public/ngos')).data,
     getNgoById: async (id) => (await api.get(`/ngos/${id}`)).data,
     getNeeds: async () => (await api.get('/public/needs')).data,
+    getNeedById: async (id) => (await api.get(`/public/needs/${id}`)).data,
+    getCampaignById: async (id) => (await api.get(`/public/campaigns/${id}`)).data,
     getAuditLogs: async () => (await api.get('/public/audit-logs')).data,
     getStories: async () => (await api.get('/public/impact-stories')).data
 };
 
 export const donationApi = {
-    getSuggestion: async () => (await api.get('/donations/suggest')).data,
+    getSuggestion: async (amount) => (await api.post('/donations/suggest', { amount })).data,
     initiate: async (data) => (await api.post('/donations/initiate', data)).data,
     verify: async (data) => (await api.post('/donations/verify', data)).data,
     getHistory: async () => (await api.get('/donations/my-donations')).data,
