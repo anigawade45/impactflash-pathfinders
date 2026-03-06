@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ImpactFlash — System Flow Diagram</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a28;
+    --border: #2a2a3a;
+    --accent: #7c3aed;
+    --accent2: #a855f7;
+    --green: #10b981;
+    --orange: #f97316;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --yellow: #f59e0b;
+    --pink: #ec4899;
+    --text: #f1f1f8;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 48px 32px; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 64px; }
+  .logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+  .logo-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: linear-gradient(135deg, #5b21b6, #7c3aed);
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+    box-shadow: 0 0 32px rgba(124,58,237,0.4);
+  }
+  .logo-text { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+  .logo-text span { color: var(--accent2); }
+  h1 { font-family: 'Syne', sans-serif; font-size: clamp(24px,4vw,40px); font-weight: 700; margin-bottom: 12px; }
+  .subtitle { color: var(--muted); font-size: 16px; }
+
+  /* Tab switcher */
+  .tabs {
+    display: flex; gap: 8px; justify-content: center;
+    margin-bottom: 48px; flex-wrap: wrap;
+  }
+  .tab {
+    padding: 10px 20px; border-radius: 99px;
+    border: 1.5px solid var(--border);
+    background: transparent; color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .tab.active, .tab:hover {
+    background: var(--accent); border-color: var(--accent);
+    color: white; box-shadow: 0 0 16px rgba(124,58,237,0.3);
+  }
+
+  /* Flow section */
+  .flow-section { display: none; animation: fadeUp 0.4s ease; }
+  .flow-section.active { display: block; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+  /* Actors row */
+  .actors {
+    display: grid; gap: 20px; margin-bottom: 40px;
+  }
+  .actors-3 { grid-template-columns: repeat(3, 1fr); }
+  .actors-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .actor {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 16px; padding: 20px;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .actor::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .actor.ngo::before    { background: var(--green); }
+  .actor.donor::before  { background: var(--blue); }
+  .actor.admin::before  { background: var(--orange); }
+  .actor.ai::before     { background: var(--accent2); }
+  .actor.user::before   { background: var(--pink); }
+  .actor.public::before { background: var(--yellow); }
+
+  .actor-icon { font-size: 32px; margin-bottom: 10px; }
+  .actor-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+  .actor-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* Flow columns */
+  .flow-cols { display: grid; gap: 24px; }
+  .flow-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .flow-cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .flow-cols-2 { grid-template-columns: repeat(2, 1fr); }
+
+  .flow-col { display: flex; flex-direction: column; gap: 12px; }
+  .col-header {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 8px 14px; border-radius: 8px; text-align: center; margin-bottom: 4px;
+  }
+  .col-ngo    { background: rgba(16,185,129,0.12); color: var(--green); }
+  .col-donor  { background: rgba(59,130,246,0.12); color: var(--blue); }
+  .col-admin  { background: rgba(249,115,22,0.12); color: var(--orange); }
+  .col-ai     { background: rgba(168,85,247,0.12); color: var(--accent2); }
+  .col-user   { background: rgba(236,72,153,0.12); color: var(--pink); }
+  .col-public { background: rgba(245,158,11,0.12); color: var(--yellow); }
+
+  /* Step boxes */
+  .step {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    font-size: 13px; line-height: 1.6;
+    position: relative; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .step:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(124,58,237,0.15); }
+  .step-num {
+    position: absolute; top: -8px; left: 12px;
+    width: 20px; height: 20px; border-radius: 50%;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .step-desc  { font-size: 12px; color: var(--muted); }
+
+  .step.ngo-step  { border-left: 3px solid var(--green); }
+  .step.donor-step{ border-left: 3px solid var(--blue); }
+  .step.admin-step{ border-left: 3px solid var(--orange); }
+  .step.ai-step   { border-left: 3px solid var(--accent2); }
+  .step.user-step { border-left: 3px solid var(--pink); }
+
+  /* AI badge */
+  .ai-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(168,85,247,0.15); color: var(--accent2);
+    border: 1px solid rgba(168,85,247,0.3);
+    padding: 2px 8px; border-radius: 99px;
+    font-size: 10px; font-weight: 700; margin-top: 6px;
+  }
+
+  /* Arrow */
+  .arrow {
+    text-align: center; color: var(--muted); font-size: 20px;
+    margin: 4px 0; line-height: 1;
+  }
+
+  /* Decision diamond */
+  .decision {
+    background: var(--surface2);
+    border: 2px solid var(--yellow);
+    border-radius: 12px; padding: 16px;
+    text-align: center; margin: 16px 0;
+    position: relative;
+  }
+  .decision-title { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--yellow); margin-bottom: 12px; font-size: 14px; }
+  .decision-paths { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .path {
+    padding: 8px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; text-align: center;
+  }
+  .path-approve { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .path-review  { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+  .path-reject  { background: rgba(239,68,68,0.15);  color: var(--red);    border: 1px solid rgba(239,68,68,0.3); }
+
+  /* AI layer box */
+  .ai-layer {
+    background: var(--surface);
+    border: 2px solid rgba(124,58,237,0.4);
+    border-radius: 16px; padding: 24px;
+    margin: 24px 0;
+    box-shadow: 0 0 40px rgba(124,58,237,0.08);
+    position: relative;
+  }
+  .ai-layer-title {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px;
+    color: var(--accent2); text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .ai-modules { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .ai-module {
+    background: var(--surface2);
+    border: 1px solid rgba(124,58,237,0.2);
+    border-radius: 10px; padding: 14px;
+  }
+  .ai-module-name { font-weight: 700; font-size: 13px; color: var(--accent2); margin-bottom: 4px; }
+  .ai-module-tech { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .ai-module-desc { font-size: 12px; color: #9ca3af; line-height: 1.5; }
+
+  /* Fraud layers */
+  .fraud-layers { display: flex; flex-direction: column; gap: 8px; }
+  .fraud-layer {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 16px;
+  }
+  .layer-num {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(239,68,68,0.15); color: var(--red);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; flex-shrink: 0;
+  }
+  .layer-name { font-weight: 600; font-size: 13px; flex: 1; }
+  .layer-desc { font-size: 12px; color: var(--muted); }
+
+  /* Escrow flow */
+  .escrow-flow { display: flex; align-items: center; gap: 0; margin: 20px 0; overflow-x: auto; }
+  .escrow-step {
+    flex: 1; min-width: 120px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 12px; text-align: center;
+    font-size: 12px;
+  }
+  .escrow-step-pct { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--green); }
+  .escrow-step-label { font-weight: 600; margin: 4px 0 2px; font-size: 12px; }
+  .escrow-step-cond { font-size: 11px; color: var(--muted); }
+  .escrow-arrow { padding: 0 8px; color: var(--muted); font-size: 18px; flex-shrink: 0; }
+
+  /* Section title */
+  .section-title {
+    font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700;
+    margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* Visibility table */
+  .vis-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .vis-table th { background: var(--surface2); padding: 12px 16px; text-align: left; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .vis-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .vis-table tr:last-child td { border-bottom: none; }
+  .check { color: var(--green); font-weight: 700; }
+  .cross { color: var(--red); font-weight: 700; }
+
+  /* Legend */
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 32px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  @media (max-width: 768px) {
+    .flow-cols-3, .flow-cols-4 { grid-template-columns: 1fr; }
+    .actors-3, .actors-4 { grid-template-columns: 1fr 1fr; }
+    .ai-modules { grid-template-columns: 1fr; }
+    .decision-paths { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">Impact<span>Flash</span></div>
+    </div>
+    <h1>Complete System Architecture</h1>
+    <p class="subtitle">Every flow, every actor, every AI touchpoint — in one diagram</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="show('overview')">🗺️ Overview</button>
+    <button class="tab" onclick="show('ngo')">🏛️ NGO Flow</button>
+    <button class="tab" onclick="show('donor')">💝 Donor Flow</button>
+    <button class="tab" onclick="show('fundraiser')">🆘 Personal Fundraiser</button>
+    <button class="tab" onclick="show('ai')">🤖 AI Engine</button>
+    <button class="tab" onclick="show('fraud')">🛡️ Fraud Prevention</button>
+    <button class="tab" onclick="show('escrow')">🔒 Escrow & Money</button>
+    <button class="tab" onclick="show('transparency')">👁️ Transparency</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div id="overview" class="flow-section active">
+    <div class="section-title">Who's Involved</div>
+    <div class="actors actors-4" style="margin-bottom:32px">
+      <div class="actor ngo">
+        <div class="actor-icon">🏛️</div>
+        <div class="actor-name">NGO</div>
+        <div class="actor-desc">Verified organization. Submits needs, receives milestone funding, posts outcome proof.</div>
+      </div>
+      <div class="actor user">
+        <div class="actor-icon">🙋</div>
+        <div class="actor-name">User / Fundraiser</div>
+        <div class="actor-desc">Any registered user. Creates personal emergency fundraisers with verified documents.</div>
+      </div>
+      <div class="actor donor">
+        <div class="actor-icon">💝</div>
+        <div class="actor-name">Donor</div>
+        <div class="actor-desc">Donates via AI suggestion or manually. Tracks real-time impact. Gets notified on delivery.</div>
+      </div>
+      <div class="actor admin">
+        <div class="actor-icon">🔐</div>
+        <div class="actor-name">Admin</div>
+        <div class="actor-desc">Reviews AI edge cases only. Verifies proofs. Releases milestone funds. Every action logged.</div>
+      </div>
+    </div>
+
+    <div class="section-title">Platform Role</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:32px;text-align:center">
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:12px">ImpactFlash = Allocation Intelligence Layer</div>
+      <div style="color:var(--muted);font-size:14px;max-width:600px;margin:0 auto;line-height:1.7">
+        We are NOT a charity. We are NOT an NGO. We NEVER hold money.<br/>
+        We are the trust, scoring, and allocation layer between donors and causes.<br/>
+        <strong style="color:var(--accent2)">Think: index fund logic applied to social impact.</strong>
+      </div>
+    </div>
+
+    <div class="section-title">High Level Flow</div>
+    <div class="flow-cols flow-cols-4">
+      <div class="flow-col">
+        <div class="col-header col-ngo">① Register & Verify</div>
+        <div class="step ngo-step">
+          <div class="step-title">NGO applies</div>
+          <div class="step-desc">FCRA + PAN + Bank penny drop + Aadhaar + Certificate</div>
+          <span class="ai-badge">🤖 Claude reads certificate</span>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="step ngo-step">
+          <div class="step-title">Admin final review</div>
+          <div class="step-desc">All 6 checks pass → Admin approves → Verified status</div>
+        </div>
+      </div>
+
+      <div class="flow-col">
+        <div class="col-header col-ai">② AI Scores Need</div>
+        <div class="step ai-step">
+          <div class="step-title">NGO submits need</div>
+          <div class="step-desc">Type, urgency, amount, beneficiaries, document</div>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="step ai-step">
+          <div class="step-title">AI pipeline runs</div>
+          <div class="step-desc">XGBoost score + Isolation Forest fraud + Claude doc check</div>
+          <span class="ai-badge">🤖 3 models in parallel</span>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="decision" style="margin:0;padding:12px">
+          <div class="decision-title" style="font-size:12px;margin-bottom:8px">Auto Decision</div>
+          <div class="decision-paths">
+            <div class="path path-approve">≥85 → Auto ✓</div>
+            <div class="path path-review">50-84 → Review</div>
+            <div class="path path-reject">&lt;50 → Reject</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-col">
+        <div class="col-header col-donor">③ Donor Gives</div>
+        <div class="step donor-step">
+          <div class="step-title">Donor enters amount</div>
+          <div class="step-desc">Browses AI-ranked needs (not popularity ranked)</div>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="step donor-step">
+          <div class="step-title">AI suggests split</div>
+          <div class="step-desc">LP optimizer finds optimal allocation across top needs</div>
+          <span class="ai-badge">🤖 Linear Programming</span>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="step donor-step">
+          <div class="step-title">Donor decides</div>
+          <div class="step-desc">Accepts AI suggestion OR donates manually to chosen NGO</div>
+        </div>
+      </div>
+
+      <div class="flow-col">
+        <div class="col-header col-ngo">④ Impact & Loop</div>
+        <div class="step ngo-step">
+          <div class="step-title">Escrow holds funds</div>
+          <div class="step-desc">Razorpay holds money. ImpactFlash issues release instructions.</div>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="step ngo-step">
+          <div class="step-title">Milestone releases</div>
+          <div class="step-desc">3 stages. Each requires proof. Admin verifies before release.</div>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="step ai-step">
+          <div class="step-title">Outcome → Story</div>
+          <div class="step-desc">AI verifies proof. Published as impact story. Donors notified. Model retrains.</div>
+          <span class="ai-badge">🤖 Feedback loop</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NGO FLOW -->
+  <div id="ngo" class="flow-section">
+    <div class="section-title">NGO Registration & Verification</div>
+    <div class="flow-cols flow-cols-3" style="margin-bottom:32px">
+      <div class="flow-col">
+        <div class="col-header col-ngo">NGO Submits</div>
+        <div class="step ngo-step"><div class="step-title">FCRA Number</div><div class="step-desc">Unique government registration ID</div></div>
+        <div class="step ngo-step"><div class="step-title">PAN Card</div><div class="step-desc">Income tax registration</div></div>
+        <div class="step ngo-step"><div class="step-title">Bank Details</div><div class="step-desc">Account + IFSC for penny drop</div></div>
+        <div class="step ngo-step"><div class="step-title">Aadhaar of Rep</div><div class="step-desc">Real person behind the NGO</div></div>
+        <div class="step ngo-step"><div class="step-title">Registration Certificate</div><div class="step-desc">PDF or image upload</div></div>
+      </div>
+      <div class="flow-col">
+        <div class="col-header col-ai">Automated Checks</div>
+        <div class="step ai-step"><div class="step-title">FCRA Database Cross-check</div><div class="step-desc">Verify against MHA's fcraonline.nic.in — name match + active status</div><span class="ai-badge">🤖 API</span></div>
+        <div class="step ai-step"><div class="step-title">PAN Verification</div><div class="step-desc">Income Tax API — is PAN valid and name matches?</div><span class="ai-badge">🤖 API</span></div>
+        <div class="step ai-step"><div class="step-title">Bank Penny Drop</div><div class="step-desc">₹1 sent to account — confirms it exists and name matches</div></div>
+        <div class="step ai-step"><div class="step-title">Aadhaar OTP</div><div class="step-desc">UIDAI API — real person verified</div></div>
+        <div class="step ai-step"><div class="step-title">Certificate AI Scan</div><div class="step-desc">Claude reads doc: reg number match, name match, issuing authority, tampering signals</div><span class="ai-badge">🤖 Claude Vision</span></div>
+      </div>
+      <div class="flow-col">
+        <div class="col-header col-admin">Admin Decision</div>
+        <div class="step admin-step"><div class="step-title">Verification Report</div><div class="step-desc">Admin sees all 6 checks with pass/fail + AI certificate analysis</div></div>
+        <div class="step admin-step"><div class="step-title">Human Review</div><div class="step-desc">Final call — approve / reject / request more info</div></div>
+        <div class="step admin-step"><div class="step-title">Reason Logged</div><div class="step-desc">Every decision permanently recorded in public audit log</div></div>
+        <div class="step ngo-step"><div class="step-title">NGO Goes Live</div><div class="step-desc">Trust Score = 50. Can now submit needs and campaigns.</div></div>
+      </div>
+    </div>
+
+    <div class="section-title">Need Submission Flow</div>
+    <div class="flow-cols flow-cols-3">
+      <div class="flow-col">
+        <div class="col-header col-ngo">NGO Fills Form</div>
+        <div class="step ngo-step"><div class="step-title">Type of Need</div><div class="step-desc">Medical equipment, food kits, school supplies etc.</div></div>
+        <div class="step ngo-step"><div class="step-title">Urgency Level</div><div class="step-desc">High / Medium / Low</div></div>
+        <div class="step ngo-step"><div class="step-title">Amount + Beneficiaries</div><div class="step-desc">Required amount, number of people</div></div>
+        <div class="step ngo-step"><div class="step-title">Deadline + Document</div><div class="step-desc">When needed by + supporting PDF/image</div></div>
+      </div>
+      <div class="flow-col">
+        <div class="col-header col-ai">AI Pipeline (parallel)</div>
+        <div class="step ai-step"><div class="step-title">XGBoost Priority Score</div><div class="step-desc">22 features → 0-100 score in milliseconds</div><span class="ai-badge">🤖 XGBoost</span></div>
+        <div class="step ai-step"><div class="step-title">Isolation Forest</div><div class="step-desc">Is this submission pattern normal or anomalous vs all past submissions?</div><span class="ai-badge">🤖 Unsupervised ML</span></div>
+        <div class="step ai-step"><div class="step-title">Document Verification</div><div class="step-desc">Claude reads doc, checks if numbers + NGO name match submission</div><span class="ai-badge">🤖 Claude Vision</span></div>
+        <div class="step ai-step"><div class="step-title">Contextual Anomaly</div><div class="step-desc">Is this amount unusual for this category + region + NGO age?</div><span class="ai-badge">🤖 Statistical</span></div>
+      </div>
+      <div class="flow-col">
+        <div class="col-header col-admin">Result</div>
+        <div class="decision" style="margin:0 0 12px">
+          <div class="decision-title">Auto Decision</div>
+          <div class="decision-paths">
+            <div class="path path-approve">Score ≥85<br/>Low Fraud<br/>→ Auto Approve</div>
+            <div class="path path-review">Score 50-84<br/>or Medium<br/>→ Admin Queue</div>
+            <div class="path path-reject">Score &lt;50<br/>High Fraud<br/>→ Auto Reject</div>
+          </div>
+        </div>
+        <div class="step ngo-step"><div class="step-title">NGO Sees</div><div class="step-desc">Score + decision + general reason. NOT the scoring formula.</div></div>
+        <div class="step admin-step"><div class="step-title">Admin Sees</div><div class="step-desc">Full SHAP breakdown, all fraud flags, exact feature values.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DONOR FLOW -->
+  <div id="donor" class="flow-section">
+    <div class="section-title">Donor Journey</div>
+    <div class="flow-cols flow-cols-3">
+      <div class="flow-col">
+        <div class="col-header col-donor">Register & Setup</div>
+        <div class="step donor-step"><div class="step-title">Create Account</div><div class="step-desc">Name, email, password</div></div>
+        <div class="step donor-step"><div class="step-title">Select Causes</div><div class="step-desc">Health, Education, Food etc. — used for AI matching</div></div>
+        <div class="step donor-step"><div class="step-title">Visibility Preference</div><div class="step-desc">Public / Anonymous / NGO only — set once, applied to all donations</div></div>
+      </div>
+      <div class="flow-col">
+        <div class="col-header col-donor">Donate</div>
+        <div class="step donor-step"><div class="step-title">Browse AI-Ranked Needs</div><div class="step-desc">Sorted by urgency score — not by how much they raised or how popular they are</div><span class="ai-badge">🤖 XGBoost ranked</span></div>
+        <div class="step donor-step"><div class="step-title">Enter Amount</div><div class="step-desc">Minimum ₹100</div></div>
+        <div class="step ai-step"><div class="step-title">AI Suggests Split</div><div class="step-desc">LP optimizer shows optimal allocation + reason for each NGO</div><span class="ai-badge">🤖 Linear Programming</span></div>
+        <div class="decision" style="margin:4px 0;padding:12px">
+          <div class="decision-title" style="font-size:12px;margin-bottom:8px">Donor Decides</div>
+          <div class="decision-paths" style="grid-template-columns:1fr 1fr">
+            <div class="path path-approve">Accept AI split</div>
+            <div class="path path-review">Donate manually</div>
+          </div>
+        </div>
+        <div class="step donor-step"><div class="step-title">Self-Dealing Check</div><div class="step-desc">Is donor connected to NGO? PAN match? Same email? → Blocked if yes</div><span class="ai-badge">🤖 Identity check</span></div>
+        <div class="step donor-step"><div class="step-title">Payment → Escrow</div><div class="step-desc">Money goes to Razorpay. ImpactFlash never touches it.</div></div>
+      </div>
+      <div class="flow-col">
+        <div class="col-header col-donor">After Donation</div>
+        <div class="step donor-step"><div class="step-title">80G Receipt</div><div class="step-desc">Auto-generated. Blocked if self-dealing detected.</div></div>
+        <div class="step donor-step"><div class="step-title">Impact Streak</div><div class="step-desc">Monthly donation streak tracked. Reminder if at risk of breaking.</div></div>
+        <div class="step donor-step"><div class="step-title">Milestone Alert</div><div class="step-desc">"NGO you funded is 80% there — want to complete it?"</div></div>
+        <div class="step donor-step"><div class="step-title">Outcome Notification</div><div class="step-desc">"Your ₹500 vaccinated 12 children — see proof" → sent when NGO delivers</div></div>
+        <div class="step donor-step"><div class="step-title">Annual Impact Report</div><div class="step-desc">Yearly summary. Shareable. Builds donor identity.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERSONAL FUNDRAISER -->
+  <div id="fundraiser" class="flow-section">
+    <div class="section-title">Personal Emergency Fundraiser</div>
+    <div style="background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.3);border-radius:12px;padding:16px;margin-bottom:24px;font-size:13px;color:#f9a8d4;line-height:1.7">
+      <strong>Use case:</strong> Friend met with accident, needs ₹50,000 for surgery. You create a fundraiser, upload hospital bills and proof. AI verifies. Admin approves. Goes live. Donors contribute. Money goes directly to hospital/patient account.
+    </div>
+    <div class="flow-cols flow-cols-3">
+      <div class="flow-col">
+        <div class="col-header col-user">User Creates</div>
+        <div class="step user-step"><div class="step-title">Title + Story</div><div class="step-desc">Emotional description of the emergency</div></div>
+        <div class="step user-step"><div class="step-title">Target Amount</div><div class="step-desc">Based on actual bills/quotes</div></div>
+        <div class="step user-step"><div class="step-title">Emergency Type</div><div class="step-desc">Medical / Accident / Disaster / Education</div></div>
+        <div class="step user-step"><div class="step-title">Hospital Bills / Proofs</div><div class="step-desc">PDF or photos of official documents</div></div>
+        <div class="step user-step"><div class="step-title">Beneficiary Bank Account</div><div class="step-desc">Penny drop verified — money goes HERE, not to creator unless same person</div></div>
+      </div>
+      <div class="flow-col">
+        <div class="col-header col-ai">AI Verification</div>
+        <div class="step ai-step"><div class="step-title">Bill Authenticity</div><div class="step-desc">Is this a real registered hospital? Claude reads hospital letterhead, registration number</div><span class="ai-badge">🤖 Claude Vision</span></div>
+        <div class="step ai-step"><div class="step-title">Amount Consistency</div><div class="step-desc">Does total of all bills = amount requested? Are costs realistic for this procedure?</div><span class="ai-badge">🤖 Contextual check</span></div>
+        <div class="step ai-step"><div class="step-title">Identity Match</div><div class="step-desc">Patient name on bills = Aadhaar name of beneficiary</div></div>
+        <div class="step ai-step"><div class="step-title">Duplicate Detection</div><div class="step-desc">Same bills submitted before? Same person raising multiple campaigns?</div><span class="ai-badge">🤖 Hash check</span></div>
+        <div class="step ai-step"><div class="step-title">Photo Analysis</div><div class="step-desc">Does photo look like a real hospital? Not stock images?</div><span class="ai-badge">🤖 Claude Vision</span></div>
+      </div>
+      <div class="flow-col">
+        <div class="col-header col-admin">Admin + Live</div>
+        <div class="step admin-step"><div class="step-title">Admin Reviews AI Report</div><div class="step-desc">All checks with pass/fail. Admin approves or rejects with reason.</div></div>
+        <div class="step user-step"><div class="step-title">Goes Live</div><div class="step-desc">Visible on fundraiser feed. Donors can contribute directly.</div></div>
+        <div class="step user-step"><div class="step-title">Live Updates</div><div class="step-desc">Creator posts updates. AI checks consistency before publishing.</div></div>
+        <div class="step user-step"><div class="step-title">2-Stage Release</div><div class="step-desc">50% on admission proof → 50% on discharge/completion proof</div></div>
+        <div class="step user-step"><div class="step-title">Auto Close</div><div class="step-desc">Closes at deadline. Unspent funds → refunded to donors automatically.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ENGINE -->
+  <div id="ai" class="flow-section">
+    <div class="section-title">AI Engine — 6 Components</div>
+    <div class="ai-layer">
+      <div class="ai-layer-title">⚡ ImpactFlash AI Stack</div>
+      <div class="ai-modules">
+        <div class="ai-module">
+          <div class="ai-module-name">Priority Scorer</div>
+          <div class="ai-module-tech">XGBoost Regressor · 400 trees · 22 features</div>
+          <div class="ai-module-desc">Scores every need 0–100 based on urgency, funding gap, beneficiaries, deadline, NGO track record, category weight and cross-features.</div>
+        </div>
+        <div class="ai-module">
+          <div class="ai-module-name">Fraud Detector</div>
+          <div class="ai-module-tech">Isolation Forest · 200 trees · Unsupervised</div>
+          <div class="ai-module-desc">Learns what normal submissions look like. Flags outliers without being told what fraud looks like. Combined with 6 auditable rule checks.</div>
+        </div>
+        <div class="ai-module">
+          <div class="ai-module-name">Score Explainer</div>
+          <div class="ai-module-tech">SHAP TreeExplainer · Exact Shapley values</div>
+          <div class="ai-module-desc">Tells admin exactly why each feature increased or decreased the score. Not approximation — mathematically exact contributions. Shown to admin only.</div>
+        </div>
+        <div class="ai-module">
+          <div class="ai-module-name">Allocation Optimizer</div>
+          <div class="ai-module-tech">scipy.linprog · HiGHS solver · Linear Programming</div>
+          <div class="ai-module-desc">Maximises total social impact for a given donation amount. Mathematically optimal — not proportional guesswork. Cause preferences as soft constraints.</div>
+        </div>
+        <div class="ai-module">
+          <div class="ai-module-name">Document Verifier</div>
+          <div class="ai-module-tech">Claude Vision + PDF text extraction</div>
+          <div class="ai-module-desc">Reads certificates, hospital bills, supporting docs. Checks: name match, number match, issuing authority, tampering signals, date consistency.</div>
+        </div>
+        <div class="ai-module">
+          <div class="ai-module-name">Feedback Loop</div>
+          <div class="ai-module-tech">Outcome data → Model retraining</div>
+          <div class="ai-module-desc">Every NGO outcome report updates trust scores and queues retraining data. Model gets smarter with every real delivery. Static rules never do this.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">What Admin Sees vs What NGO Sees</div>
+    <table class="vis-table">
+      <thead>
+        <tr>
+          <th>Information</th>
+          <th>NGO</th>
+          <th>Donor</th>
+          <th>Admin</th>
+          <th>Public</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Priority score (number)</td><td class="cross">✗ Hidden</td><td class="cross">✗ Hidden</td><td class="check">✓ Full</td><td class="cross">✗</td></tr>
+        <tr><td>SHAP feature breakdown</td><td class="cross">✗ Never</td><td class="cross">✗ Never</td><td class="check">✓ Full</td><td class="cross">✗</td></tr>
+        <tr><td>Fraud flags + reasons</td><td class="cross">✗ Never</td><td class="cross">✗ Never</td><td class="check">✓ Full</td><td class="cross">✗</td></tr>
+        <tr><td>Decision + general reason</td><td class="check">✓ Yes</td><td class="cross">✗</td><td class="check">✓ Full</td><td class="cross">✗</td></tr>
+        <tr><td>NGO trust score (high/med/low)</td><td class="check">✓ Own</td><td class="check">✓ See</td><td class="check">✓ All</td><td class="check">✓ Yes</td></tr>
+        <tr><td>Impact outcomes + proof</td><td class="check">✓ Own</td><td class="check">✓ Funded</td><td class="check">✓ All</td><td class="check">✓ Yes</td></tr>
+        <tr><td>Admin audit log</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓ Full</td><td class="check">✓ Public</td></tr>
+        <tr><td>Donor amount</td><td class="cross">✗ Private</td><td class="check">✓ Own</td><td class="check">✓ Yes</td><td class="cross">✗ Private</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FRAUD -->
+  <div id="fraud" class="flow-section">
+    <div class="section-title">5-Layer Fraud Prevention</div>
+    <div class="fraud-layers">
+      <div class="fraud-layer">
+        <div class="layer-num">1</div>
+        <div>
+          <div class="layer-name">Identity Verification (Registration)</div>
+          <div class="layer-desc">FCRA + PAN + Aadhaar + Bank penny drop. Government-verified identity. Can't fake a penny drop. Can't fake Aadhaar OTP.</div>
+        </div>
+      </div>
+      <div class="fraud-layer">
+        <div class="layer-num">2</div>
+        <div>
+          <div class="layer-name">AI Submission Fraud Detection</div>
+          <div class="layer-desc">Isolation Forest detects abnormal patterns. 6 rule checks: high frequency, urgency without doc, amount spike, repeated escalations, cost per person anomaly, large request flag.</div>
+        </div>
+      </div>
+      <div class="fraud-layer">
+        <div class="layer-num">3</div>
+        <div>
+          <div class="layer-name">Self-Dealing Prevention (Donation)</div>
+          <div class="layer-desc">Before every donation: donor PAN = NGO PAN? Same email? Donor is registered owner of NGO? → Blocked. 80G receipt also blocked. Network pattern analysis for circular rings.</div>
+        </div>
+      </div>
+      <div class="fraud-layer">
+        <div class="layer-num">4</div>
+        <div>
+          <div class="layer-name">Milestone Escrow (Post-Donation)</div>
+          <div class="layer-desc">Money never released in full. 3 stages — each requires verified proof. If NGO disappears mid-campaign: funds frozen, donors notified, refund option given.</div>
+        </div>
+      </div>
+      <div class="fraud-layer">
+        <div class="layer-num">5</div>
+        <div>
+          <div class="layer-name">Admin Collusion Prevention</div>
+          <div class="layer-desc">Two admins required above ₹1L. No single admin reviews same NGO repeatedly. All actions publicly logged. AI flags admin pattern anomalies. Rotating assignments.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:32px">Trust Score — Living Number</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:24px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div>
+          <div style="font-weight:700;margin-bottom:12px;color:var(--green)">Score Goes UP when:</div>
+          <div style="font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px">
+            <span>✅ Milestone delivered on time</span>
+            <span>✅ Outcome matches promise</span>
+            <span>✅ Beneficiary feedback positive</span>
+            <span>✅ Long track record of delivery</span>
+            <span>✅ Amount used matches receipts</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-weight:700;margin-bottom:12px;color:var(--red)">Score Goes DOWN when:</div>
+          <div style="font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px">
+            <span>🚩 Milestone missed or delayed</span>
+            <span>🚩 Fraud flag triggered</span>
+            <span>🚩 Document inconsistency caught</span>
+            <span>🚩 Admin override needed</span>
+            <span>🚩 Spot check failed</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:12px;text-align:center">
+        <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px"><div style="font-weight:700;color:var(--red);margin-bottom:4px">&lt; 40</div><div style="color:var(--muted)">Suspended</div></div>
+        <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px"><div style="font-weight:700;color:var(--yellow);margin-bottom:4px">40–60</div><div style="color:var(--muted)">Manual review every time</div></div>
+        <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:10px"><div style="font-weight:700;color:var(--blue);margin-bottom:4px">60–80</div><div style="color:var(--muted)">Normal AI scoring</div></div>
+        <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:10px"><div style="font-weight:700;color:var(--green);margin-bottom:4px">80+</div><div style="color:var(--muted)">Fast-track + priority</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESCROW -->
+  <div id="escrow" class="flow-section">
+    <div class="section-title">Money Flow — We Never Touch It</div>
+    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:16px;margin-bottom:28px;font-size:13px;color:#6ee7b7">
+      <strong>Core principle:</strong> ImpactFlash only issues instructions. Razorpay (RBI-licensed) holds all funds. NGO bank account receives money directly. We are the intelligence layer, not a financial intermediary.
+    </div>
+
+    <div class="section-title">NGO Need — 3-Stage Escrow</div>
+    <div class="escrow-flow">
+      <div class="escrow-step">
+        <div style="font-size:20px;margin-bottom:6px">💝</div>
+        <div class="escrow-step-label">Donor Pays</div>
+        <div class="escrow-step-cond">₹1,000 donated</div>
+      </div>
+      <div class="escrow-arrow">→</div>
+      <div class="escrow-step" style="border-color:rgba(124,58,237,0.4)">
+        <div style="font-size:20px;margin-bottom:6px">🔒</div>
+        <div class="escrow-step-label">Razorpay Escrow</div>
+        <div class="escrow-step-cond">Full amount held</div>
+      </div>
+      <div class="escrow-arrow">→</div>
+      <div class="escrow-step">
+        <div class="escrow-step-pct">40%</div>
+        <div class="escrow-step-label">Milestone 1</div>
+        <div class="escrow-step-cond">Start proof submitted + admin verified</div>
+      </div>
+      <div class="escrow-arrow">→</div>
+      <div class="escrow-step">
+        <div class="escrow-step-pct">40%</div>
+        <div class="escrow-step-label">Milestone 2</div>
+        <div class="escrow-step-cond">Mid-point report + admin verified</div>
+      </div>
+      <div class="escrow-arrow">→</div>
+      <div class="escrow-step">
+        <div class="escrow-step-pct">20%</div>
+        <div class="escrow-step-label">Milestone 3</div>
+        <div class="escrow-step-cond">Final outcome + beneficiary proof</div>
+      </div>
+      <div class="escrow-arrow">→</div>
+      <div class="escrow-step" style="border-color:rgba(16,185,129,0.4)">
+        <div style="font-size:20px;margin-bottom:6px">🏛️</div>
+        <div class="escrow-step-label">NGO Bank Account</div>
+        <div class="escrow-step-cond">Direct transfer</div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:32px">Personal Fundraiser — 2-Stage</div>
+    <div class="escrow-flow">
+      <div class="escrow-step"><div style="font-size:20px;margin-bottom:6px">💝</div><div class="escrow-step-label">Donors Contribute</div><div class="escrow-step-cond">Multiple donors</div></div>
+      <div class="escrow-arrow">→</div>
+      <div class="escrow-step" style="border-color:rgba(124,58,237,0.4)"><div style="font-size:20px;margin-bottom:6px">🔒</div><div class="escrow-step-label">Razorpay Escrow</div><div class="escrow-step-cond">Held safely</div></div>
+      <div class="escrow-arrow">→</div>
+      <div class="escrow-step"><div class="escrow-step-pct">50%</div><div class="escrow-step-label">Stage 1</div><div class="escrow-step-cond">Hospital admission proof</div></div>
+      <div class="escrow-arrow">→</div>
+      <div class="escrow-step"><div class="escrow-step-pct">50%</div><div class="escrow-step-label">Stage 2</div><div class="escrow-step-cond">Discharge / completion proof</div></div>
+      <div class="escrow-arrow">→</div>
+      <div class="escrow-step" style="border-color:rgba(16,185,129,0.4)"><div style="font-size:20px;margin-bottom:6px">🏥</div><div class="escrow-step-label">Hospital / Patient Account</div><div class="escrow-step-cond">Penny-drop verified</div></div>
+    </div>
+
+    <div class="section-title" style="margin-top:32px">What Happens If NGO Fails to Deliver</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;font-size:13px">
+        <div style="font-weight:700;color:var(--yellow);margin-bottom:8px">⏰ Missed Milestone</div>
+        <div style="color:var(--muted)">Admin notified. NGO given 7-day grace period. Trust score drops. If no response → funds frozen.</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;font-size:13px">
+        <div style="font-weight:700;color:var(--orange);margin-bottom:8px">🚨 Fraud Detected</div>
+        <div style="color:var(--muted)">Funds frozen immediately. Admin investigates. NGO suspended. Donors notified. Refund option given.</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;font-size:13px">
+        <div style="font-weight:700;color:var(--red);margin-bottom:8px">❌ Proven Fraud</div>
+        <div style="color:var(--muted)">Full refund to donors. NGO permanently banned at individual level (Aadhaar blacklisted). FCRA violation reported.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANSPARENCY -->
+  <div id="transparency" class="flow-section">
+    <div class="section-title">What Is Public vs Private</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px">
+      <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:16px;padding:20px">
+        <div style="font-weight:700;color:var(--green);margin-bottom:12px;font-size:15px">✅ Publicly Visible (No Login)</div>
+        <div style="font-size:13px;color:#9ca3af;display:flex;flex-direction:column;gap:8px">
+          <span>All verified NGOs + trust score (High/Med/Low)</span>
+          <span>All published impact stories + proofs</span>
+          <span>Total donations on platform (aggregate)</span>
+          <span>Category-wise donation breakdown</span>
+          <span>Admin decision logs (who approved, reason)</span>
+          <span>Platform principles and methodology</span>
+        </div>
+      </div>
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:16px;padding:20px">
+        <div style="font-weight:700;color:var(--red);margin-bottom:12px;font-size:15px">🔒 Always Private</div>
+        <div style="font-size:13px;color:#9ca3af;display:flex;flex-direction:column;gap:8px">
+          <span>Donor's exact amount donated</span>
+          <span>Donor identity (unless they chose public)</span>
+          <span>AI scoring formula and feature weights</span>
+          <span>SHAP breakdown (admin only)</span>
+          <span>Fraud detection rules and thresholds</span>
+          <span>NGO bank account details</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Donor Visibility Options</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px">
+      <div style="background:var(--surface2);border:2px solid var(--green);border-radius:12px;padding:20px;text-align:center">
+        <div style="font-size:24px;margin-bottom:8px">🌟</div>
+        <div style="font-weight:700;margin-bottom:6px">Public</div>
+        <div style="font-size:13px;color:var(--muted)">Name shown on impact story. Inspires others. Builds community.</div>
+      </div>
+      <div style="background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:20px;text-align:center">
+        <div style="font-size:24px;margin-bottom:8px">👤</div>
+        <div style="font-weight:700;margin-bottom:6px">Anonymous</div>
+        <div style="font-size:13px;color:var(--muted)">Default. "Anonymous Donor" shown. Amount always private.</div>
+      </div>
+      <div style="background:var(--surface2);border:2px solid var(--blue);border-radius:12px;padding:20px;text-align:center">
+        <div style="font-size:24px;margin-bottom:8px">🏛️</div>
+        <div style="font-weight:700;margin-bottom:6px">NGO Only</div>
+        <div style="font-size:13px;color:var(--muted)">Name visible to the NGO but not on public feed.</div>
+      </div>
+    </div>
+
+    <div class="section-title">Impact Story Flow</div>
+    <div style="display:flex;gap:0;align-items:center;overflow-x:auto">
+      <div style="flex:1;min-width:140px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;font-size:12px">
+        <div style="font-size:22px;margin-bottom:6px">📋</div>
+        <div style="font-weight:600;margin-bottom:4px">NGO submits outcome</div>
+        <div style="color:var(--muted)">What was promised vs delivered</div>
+      </div>
+      <div style="padding:0 8px;color:var(--muted);font-size:18px">→</div>
+      <div style="flex:1;min-width:140px;background:var(--surface2);border:1px solid rgba(168,85,247,0.4);border-radius:12px;padding:16px;text-align:center;font-size:12px">
+        <div style="font-size:22px;margin-bottom:6px">🤖</div>
+        <div style="font-weight:600;margin-bottom:4px">AI checks it</div>
+        <div style="color:var(--muted)">Numbers consistent? Photos real? Location match?</div>
+      </div>
+      <div style="padding:0 8px;color:var(--muted);font-size:18px">→</div>
+      <div style="flex:1;min-width:140px;background:var(--surface2);border:1px solid rgba(249,115,22,0.4);border-radius:12px;padding:16px;text-align:center;font-size:12px">
+        <div style="font-size:22px;margin-bottom:6px">🔐</div>
+        <div style="font-weight:600;margin-bottom:4px">Admin verifies</div>
+        <div style="color:var(--muted)">Human confirmation before publishing</div>
+      </div>
+      <div style="padding:0 8px;color:var(--muted);font-size:18px">→</div>
+      <div style="flex:1;min-width:140px;background:var(--surface2);border:1px solid rgba(16,185,129,0.4);border-radius:12px;padding:16px;text-align:center;font-size:12px">
+        <div style="font-size:22px;margin-bottom:6px">📰</div>
+        <div style="font-weight:600;margin-bottom:4px">Published as story</div>
+        <div style="color:var(--muted)">Public feed. Verified badge.</div>
+      </div>
+      <div style="padding:0 8px;color:var(--muted);font-size:18px">→</div>
+      <div style="flex:1;min-width:140px;background:var(--surface2);border:1px solid rgba(59,130,246,0.4);border-radius:12px;padding:16px;text-align:center;font-size:12px">
+        <div style="font-size:22px;margin-bottom:6px">🔔</div>
+        <div style="font-weight:600;margin-bottom:4px">Donors notified</div>
+        <div style="color:var(--muted)">"Your ₹500 helped 12 children"</div>
+      </div>
+      <div style="padding:0 8px;color:var(--muted);font-size:18px">→</div>
+      <div style="flex:1;min-width:140px;background:var(--surface2);border:1px solid rgba(124,58,237,0.4);border-radius:12px;padding:16px;text-align:center;font-size:12px">
+        <div style="font-size:22px;margin-bottom:6px">🧠</div>
+        <div style="font-weight:600;margin-bottom:4px">AI retrains</div>
+        <div style="color:var(--muted)">Trust score updated. Model learns.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.flow-section').forEach(s => s.classList.remove('active'))
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+  document.getElementById(id).classList.add('active')
+  event.target.classList.add('active')
+}
+</script>
+</body>
+</html>
