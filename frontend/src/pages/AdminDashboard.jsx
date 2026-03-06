@@ -192,78 +192,30 @@ export default function AdminDashboard() {
                             <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">AI-Flagged Projects</h2>
                             <span className="bg-slate-800 text-white text-[10px] font-black px-2 py-1 rounded-md">{pending.needs.length + pending.campaigns.length}</span>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {[...pending.needs.map(n => ({ ...n, type: 'need' })), ...pending.campaigns.map(c => ({ ...c, type: 'campaign' }))].map(item => (
-                                <div key={item._id} className="modern-card p-0 bg-white overflow-hidden group border border-slate-100 flex flex-col">
-                                    {/* Verdict Header */}
-                                    <div className={`p-5 flex justify-between items-center ${item.aiVerdict?.includes('APPROVED') ? 'bg-green-500' :
-                                        item.aiVerdict?.includes('FLAGGED') ? 'bg-red-500' : 'bg-slate-800'
+                                <div key={item._id} className="modern-card p-0 bg-white border border-slate-100 flex flex-col group hover:shadow-xl transition-all duration-300 overflow-hidden">
+                                    <div className={`px-4 py-2 flex justify-between items-center ${item.aiVerdict?.includes('APPROVED') ? 'bg-green-500' :
+                                            item.aiVerdict?.includes('FLAGGED') ? 'bg-red-500' : 'bg-slate-800'
                                         }`}>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-lg">🤖</span>
-                                            <div>
-                                                <p className="text-[8px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">AI Decision</p>
-                                                <h4 className="text-xs font-black text-white uppercase tracking-tight">{item.aiVerdict || 'ANALYZING...'}</h4>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-[8px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">Dynamic Score</p>
-                                            <p className="text-xl font-black text-white leading-none">{item.aiScore}/100</p>
-                                        </div>
+                                        <p className="text-[8px] font-black text-white uppercase tracking-widest">{item.aiVerdict || 'PENDING'}</p>
+                                        <p className="text-[10px] font-black text-white">{item.aiScore}/100</p>
                                     </div>
-
-                                    {/* Breakdown Panel */}
-                                    <div className="p-6 space-y-5 flex-1">
-                                        <div>
-                                            <h3 className="text-base font-black text-slate-800 uppercase tracking-tighter mb-1 leading-tight">{item.title}</h3>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.category} • {item.type}</p>
+                                    <div className="p-6 flex-1">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[8px] font-black uppercase rounded border border-slate-200">{item.type}</span>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.category}</p>
                                         </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <p className="text-[9px] font-black text-green-500 uppercase tracking-widest">Why High</p>
-                                                {item.aiWhyHigh ? (
-                                                    item.aiWhyHigh.split(',').map((reason, idx) => (
-                                                        <p key={idx} className="text-[10px] font-bold text-slate-600 flex items-start gap-1">
-                                                            <span className="text-green-500">↑</span> {reason.trim()}
-                                                        </p>
-                                                    ))
-                                                ) : <p className="text-[10px] text-slate-400 italic">No major boosts</p>}
-                                            </div>
-                                            <div className="space-y-2 border-l border-slate-100 pl-4">
-                                                <p className="text-[9px] font-black text-red-400 uppercase tracking-widest">Why Not Higher</p>
-                                                {item.aiWhyNotHigher ? (
-                                                    item.aiWhyNotHigher.split(',').map((reason, idx) => (
-                                                        <p key={idx} className="text-[10px] font-bold text-slate-600 flex items-start gap-1">
-                                                            <span className="text-red-400">↓</span> {reason.trim()}
-                                                        </p>
-                                                    ))
-                                                ) : <p className="text-[10px] text-slate-400 italic">Profile optimized</p>}
-                                            </div>
-                                        </div>
-
-                                        <div className={`p-4 rounded-2xl border ${item.aiFraudStatus === 'HIGH RISK' ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
-                                            <div className="flex justify-between items-center mb-2">
-                                                <p className={`text-[9px] font-black uppercase ${item.aiFraudStatus === 'HIGH RISK' ? 'text-red-400' : 'text-green-500'}`}>Fraud: {item.aiFraudStatus}</p>
-                                                <p className="text-[8px] font-bold text-slate-400 italic">Isolation Forest Matrix</p>
-                                            </div>
-                                            <p className="text-[11px] font-bold text-slate-700 leading-tight">
-                                                {item.aiOneFlag || 'No anomalies detected across 22 features.'}
-                                            </p>
-                                        </div>
-
-                                        {item.aiSuggestion && (
-                                            <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 border-dashed">
-                                                <p className="text-[9px] font-black text-indigo-400 uppercase mb-1">AI Recommendation</p>
-                                                <p className="text-[10px] font-bold text-indigo-700">{item.aiSuggestion}</p>
-                                            </div>
-                                        )}
+                                        <h3 className="text-base font-black text-slate-800 uppercase tracking-tighter leading-tight mb-2 line-clamp-2">{item.title}</h3>
+                                        <p className="text-[10px] font-bold text-orange-500 uppercase">NGO: {item.ngoId?.name}</p>
                                     </div>
-
-                                    {/* Action Footer */}
-                                    <div className="p-6 pt-0 flex gap-3">
-                                        <button onClick={() => handleReview(item._id, item.type, 'approve')} className="flex-2 py-4 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-black shadow-xl shadow-slate-900/10 active:scale-95 transition-all">Manual Override Approve</button>
-                                        <button onClick={() => handleReview(item._id, item.type, 'reject')} className="flex-1 py-4 bg-white border border-slate-200 text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-50 active:scale-95 transition-all">Decline</button>
+                                    <div className="px-6 pb-6">
+                                        <Link
+                                            to={`/admin/project/${item.type}/${item._id}`}
+                                            className="block w-full py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-black shadow-lg shadow-slate-900/10 active:scale-95 transition-all text-center"
+                                        >
+                                            View Audit Report
+                                        </Link>
                                     </div>
                                 </div>
                             ))}

@@ -108,3 +108,24 @@ exports.getPublicStories = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+// 7. Specific Need by ID
+exports.getNeedById = async (req, res) => {
+    try {
+        const need = await Need.findById(req.params.id).populate('ngoId', 'name email trustScore impactScore address');
+        if (!need) return res.status(404).json({ success: false, message: 'Need not found.' });
+        res.status(200).json({ success: true, data: need });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// 8. Specific Campaign by ID
+exports.getCampaignById = async (req, res) => {
+    try {
+        const campaign = await Campaign.findById(req.params.id).populate('ngoId', 'name email trustScore impactScore address');
+        if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found.' });
+        res.status(200).json({ success: true, data: campaign });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

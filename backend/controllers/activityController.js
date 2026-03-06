@@ -31,7 +31,10 @@ const determineStatus = (score, fraudFlag, trustScore) => {
 
 exports.submitNeed = async (req, res) => {
     try {
-        const { ngoId, title, urgency, category, amount, beneficiaries, deadline, documents } = req.body;
+        let { ngoId, title, urgency, category, amount, beneficiaries, deadline } = req.body;
+
+        // Handle multipart data
+        const documents = req.file ? [req.file.path] : [];
 
         // 0. Check NGO Trust Status
         const ngo = await NGO.findById(ngoId);
@@ -43,19 +46,26 @@ exports.submitNeed = async (req, res) => {
             });
         }
 
-        // 1. Get AI Score
+        // 1. Get AI Score and Document Verification
         const aiResponse = await axios.post(AI_ENGINE_URL, {
             type: 'need',
             urgency,
             category,
             amount,
-            beneficiaries
+            beneficiaries,
+            image_url: documents[0] || null // Send the first document for AI vision check
         });
 
-        const { score, verdict, why_high, why_not_higher, fraud_status, isolation_forest, one_flag, suggestion, fraudFlag } = aiResponse.data;
+        const { score, verdict, why_high, why_not_higher, fraud_status, one_flag, suggestion, fraudFlag, visionAuthentic, aiRecommendationPoints } = aiResponse.data;
 
         // 2. Determine workflow status with Trust Score factor
-        const status = determineStatus(score, fraudFlag, ngo.trustScore);
+        // If AI vision failed but was required for high urgency, flag it
+        let finalStatus = determineStatus(score, fraudFlag, ngo.trustScore);
+
+        // If document was provided but AI said it's fake, force review
+        if (documents.length > 0 && visionAuthentic === false) {
+            finalStatus = 'in_review';
+        }
 
         // Layer 4: 5% Random Spot Check
         const isSpotCheck = Math.random() < 0.05;
@@ -75,11 +85,12 @@ exports.submitNeed = async (req, res) => {
             aiWhyHigh: why_high,
             aiWhyNotHigher: why_not_higher,
             aiFraudStatus: fraud_status,
-            aiOneFlag: one_flag,
             aiSuggestion: suggestion,
+            aiRecommendationPoints,
             explanation: `${verdict}: ${why_high}. ${one_flag}`,
             fraudFlag,
-            status: isSpotCheck ? 'in_review' : status,
+            visionAuthentic,
+            status: isSpotCheck ? 'in_review' : finalStatus,
             isSpotCheck,
             milestones: [
                 { level: 1, title: 'Initiation', percentage: 40, status: 'pending' },
@@ -89,6 +100,15 @@ exports.submitNeed = async (req, res) => {
         });
 
         await newNeed.save();
+
+        // Increment Impact only if it goes LIVE immediately (AI Auto-Approve)
+        if (newNeed.status === 'live') {
+            let impactIncrement = 1.0;
+            if (newNeed.documents?.length > 0 && visionAuthentic !== false) {
+                impactIncrement = 1.5;
+            }
+            await NGO.findByIdAndUpdate(ngoId, { $inc: { impactScore: impactIncrement } });
+        }
 
         res.status(201).json({
             success: true,
@@ -104,7 +124,11 @@ exports.submitNeed = async (req, res) => {
 
 exports.createCampaign = async (req, res) => {
     try {
-        const { ngoId, title, story, emotionalAppeal, targetAmount, photos } = req.body;
+        const { ngoId, title, story, targetAmount, category } = req.body;
+
+        // Handle multipart files
+        const documents = req.files?.documents?.map(file => file.path) || [];
+        const photos = req.files?.photos?.map(file => file.path) || [];
 
         // 0. Check NGO Trust Status
         const ngo = await NGO.findById(ngoId);
@@ -112,20 +136,25 @@ exports.createCampaign = async (req, res) => {
         if (ngo.status !== 'verified') {
             return res.status(403).json({
                 success: false,
-                message: `Verification Pending: Your NGO must be verified by an administrator before creating needs or campaigns. Current Status: ${ngo.status.toUpperCase()}`
+                message: `Verification Pending: Your NGO must be verified by an administrator before creating fundraising campaigns. Current Status: ${ngo.status.toUpperCase()}`
             });
         }
+
+        // Default 15-day deadline for 'Immediate Fund Raising'
+        const deadline = new Date();
+        deadline.setDate(deadline.getDate() + 15);
 
         // 1. Get AI Score
         const aiResponse = await axios.post(AI_ENGINE_URL, {
             type: 'campaign',
+            title,
             story,
-            category: 'Social',
+            category: category || 'Social',
             targetAmount,
-            emotionalAppeal
+            image_url: photos[0] || documents[0] || null
         });
 
-        const { score, verdict, why_high, why_not_higher, fraud_status, isolation_forest, one_flag, suggestion, fraudFlag } = aiResponse.data;
+        const { score, verdict, why_high, why_not_higher, fraud_status, isolation_forest, one_flag, suggestion, fraudFlag, aiRecommendationPoints } = aiResponse.data;
 
         // 2. Determine workflow status with Trust Score factor
         const status = determineStatus(score, fraudFlag, ngo.trustScore);
@@ -138,10 +167,11 @@ exports.createCampaign = async (req, res) => {
             ngoId,
             title,
             story,
-            emotionalAppeal,
+            deadline,
             targetAmount,
-            category: 'Social',
+            category: category || 'Social',
             photos,
+            documents,
             aiScore: score,
             aiVerdict: verdict,
             aiWhyHigh: why_high,
@@ -149,6 +179,7 @@ exports.createCampaign = async (req, res) => {
             aiFraudStatus: fraud_status,
             aiOneFlag: one_flag,
             aiSuggestion: suggestion,
+            aiRecommendationPoints,
             explanation: `${verdict}: ${why_high}. ${one_flag}`,
             fraudFlag,
             status: isSpotCheck ? 'in_review' : status,
@@ -161,6 +192,11 @@ exports.createCampaign = async (req, res) => {
         });
 
         await newCampaign.save();
+
+        // Increment Impact only if LIVE (AI Auto-Approve)
+        if (newCampaign.status === 'live') {
+            await NGO.findByIdAndUpdate(ngoId, { $inc: { impactScore: 1.0 } });
+        }
 
         res.status(201).json({
             success: true,
@@ -263,9 +299,24 @@ exports.reviewItem = async (req, res) => {
         item.lastReviewedBy = req.userId;
         await item.save();
 
-        // Update NGO lastReviewedBy
+        // Update NGO lastReviewedBy and set Initial Impact Score on verification
         if (targetNgoId) {
-            await NGO.findByIdAndUpdate(targetNgoId, { lastReviewedBy: req.userId });
+            const updateData = { lastReviewedBy: req.userId };
+            if (type === 'ngo' && action === 'approve') {
+                updateData.impactScore = 50;
+            }
+
+            // Dynamic Impact Score increment on Project Approval
+            if (action === 'approve') {
+                if (type === 'need') {
+                    const impactBonus = (item.documents?.length > 0 && item.visionAuthentic !== false) ? 1.5 : 1.0;
+                    updateData.$inc = { impactScore: impactBonus };
+                } else if (type === 'campaign') {
+                    updateData.$inc = { impactScore: 1.0 };
+                }
+            }
+
+            await NGO.findByIdAndUpdate(targetNgoId, updateData);
         }
 
         // Layer 5: Public Audit Log
