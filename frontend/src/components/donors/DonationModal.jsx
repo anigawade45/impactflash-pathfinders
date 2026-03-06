@@ -24,21 +24,14 @@ export default function DonationModal({ isOpen, onClose, items, totalAmount }) {
                 panCard
             });
 
-            if (res.success) {
-                setTimeout(async () => {
-                    const verifyRes = await donationApi.verify({
-                        razorpay_order_id: res.orderId,
-                        razorpay_payment_id: 'pay_mock_' + Date.now(),
-                        razorpay_signature: 'mock_sig',
-                        donationId: res.donationId
-                    });
-                    if (verifyRes.success) {
-                        setSuccess(true);
-                    }
-                }, 2000); // Changed from 1500ms to 2000ms
+            if (res.success && res.url) {
+                // Redirect to Stripe Checkout
+                window.location.href = res.url;
+            } else {
+                throw new Error('Failed to initialize payment session');
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Transaction failed. Self-dealing detected?');
+            setError(err.response?.data?.message || err.message || 'Transaction failed. Self-dealing detected?');
         } finally {
             setLoading(false);
         }
