@@ -47,8 +47,8 @@ class ImpactEngine:
     def calculate_score(self, data):
         return calculate_project_score(data, self.xgb_model, self.iso_forest)
 
-    def suggest_optimal_split(self, donation_amount, candidates):
-        return suggest_split_lp(donation_amount, candidates)
+    def suggest_optimal_split(self, donation_amount, candidates, donor_causes=None):
+        return suggest_split_lp(donation_amount, candidates, donor_causes)
 
     def detect_circular_fraud(self, transactions):
         return detect_circular_fraud_rings(transactions)

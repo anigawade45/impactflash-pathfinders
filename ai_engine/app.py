@@ -22,16 +22,17 @@ def get_score():
 @app.route('/api/suggest-split', methods=['POST'])
 def suggest_split():
     """
-    Input: { amount: float, candidates: [{_id, aiScore, urgency, type, title}] }
+    Input: { amount: float, candidates: [...], donor_causes: [...] }
     """
     data = request.json
     donation_amount = data.get('amount')
     candidates = data.get('candidates', [])
+    donor_causes = data.get('donor_causes', [])
     
     if not donation_amount or not candidates:
         return jsonify({"success": False, "message": "Missing input data"}), 400
         
-    splits = engine.suggest_optimal_split(donation_amount, candidates)
+    splits = engine.suggest_optimal_split(donation_amount, candidates, donor_causes)
     return jsonify({
         "success": True,
         "splits": splits
