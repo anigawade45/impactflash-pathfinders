@@ -1,68 +1,109 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import "tailwindcss";
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@theme {
+  --color-primary-500: #f97316;
+  /* Orange 500 */
+  --color-primary-600: #ea580c;
+  /* Orange 600 */
+  --color-secondary: #0ea5e9;
+  /* Sky blue for contrast */
+  --color-background-light: #f8fafc;
+  /* Slate 50 */
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  --font-sans: 'Outfit', 'Inter', sans-serif;
+  --font-heading: 'Outfit', 'Inter', sans-serif;
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+  --shadow-3xl: 0 35px 60px -15px var(--tw-shadow-color, rgb(0 0 0 / 0.3));
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer base {
+  body {
+    @apply bg-background-light text-slate-800 font-sans antialiased selection:bg-orange-500/30;
   }
-  a:hover {
-    color: #747bff;
+}
+
+/* Custom animations and base styles */
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-linear-to-r from-orange-500 via-amber-500 to-orange-400;
+}
+
+.text-gradient-blue {
+  @apply bg-clip-text text-transparent bg-linear-to-r from-sky-400 via-blue-500 to-indigo-600;
+}
+
+/* Modern Minimalist Design System */
+.modern-card {
+  @apply bg-white border border-slate-200 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500;
+}
+
+.modern-card-inset {
+  @apply bg-slate-50 border border-slate-100 rounded-2xl;
+}
+
+.glass-morphism {
+  @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-2xl;
+}
+
+.glass-dark {
+  @apply bg-slate-900/80 backdrop-blur-2xl border border-white/10 shadow-3xl;
+}
+
+.btn-primary {
+  @apply px-8 py-4 bg-orange-500 text-white font-bold rounded-2xl hover:bg-orange-600 active:scale-[0.98] transition-all shadow-xl shadow-orange-500/30 disabled:bg-slate-300 disabled:shadow-none relative overflow-hidden;
+}
+
+.btn-primary::after {
+  content: '';
+  @apply absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full hover:animate-[shimmer_2s_infinite];
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+.btn-secondary {
+  @apply px-8 py-4 bg-white border border-slate-200 text-slate-700 font-bold rounded-2xl hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] transition-all disabled:opacity-50 shadow-sm;
+}
+
+.premium-border {
+  @apply border border-slate-200/60 relative overflow-hidden;
+}
+
+.premium-border::before {
+  content: '';
+  @apply absolute inset-0 bg-linear-to-r from-transparent via-orange-500/10 to-transparent -translate-y-full animate-[borderFlow_4s_infinite_linear];
+}
+
+@keyframes borderFlow {
+  0% {
+    transform: translateY(-100%);
   }
+
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.floating {
+  @apply animate-[float_6s_ease-in-out_infinite];
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.noise-bg {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
 }
