@@ -3,11 +3,16 @@ const router = express.Router();
 const activityController = require('../controllers/activityController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
+const { upload } = require('../utils/cloudinary');
+
 // POST /api/activity/need
-router.post('/need', protect, authorize('ngo'), activityController.submitNeed);
+router.post('/need', protect, authorize('ngo'), upload.single('documents'), activityController.submitNeed);
 
 // POST /api/activity/campaign
-router.post('/campaign', protect, authorize('ngo'), activityController.createCampaign);
+router.post('/campaign', protect, authorize('ngo'), upload.fields([
+    { name: 'documents', maxCount: 1 },
+    { name: 'photos', maxCount: 5 }
+]), activityController.createCampaign);
 
 // GET /api/activity/my-activities
 router.get('/my-activities', protect, authorize('ngo'), activityController.getMyActivities);
