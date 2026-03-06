@@ -14,6 +14,9 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
+const donationController = require('./controllers/donationController');
+app.post('/api/donations/webhook', express.raw({ type: 'application/json' }), donationController.handleStripeWebhook);
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -58,6 +61,10 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`Backend server running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Backend server running on port ${PORT}`);
+    });
+}
+
+module.exports = app;
