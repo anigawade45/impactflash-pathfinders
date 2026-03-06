@@ -1,0 +1,13 @@
+flask
+flask-cors
+pandas
+numpy
+xgboost
+scikit-learn
+shap
+networkx
+scipy
+pulp
+google-generativeai
+python-dotenv
+requests
