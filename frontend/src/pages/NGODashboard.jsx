@@ -1,204 +1,249 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { activityApi, escrowApi } from '../api';
-import { useAuth } from '../context/AuthContext';
+import { useParams, useNavigate } from 'react-router-dom';
+import { publicApi, activityApi } from '../api';
 
-export default function NgoDashboard() {
-    const { user: ngo } = useAuth();
+export default function NgoDetails() {
+    const { id } = useParams();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('need'); // 'need', 'campaign', or 'active'
-    const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState(null);
-    const [errorMsg, setErrorMsg] = useState('');
-    const [activeProjects, setActiveProjects] = useState({ needs: [], campaigns: [] });
-
-    const [needData, setNeedData] = useState({ title: '', description: '', urgency: 'medium', amount: '', beneficiaries: '', deadline: '', documents: '' });
-    const [campaignData, setCampaignData] = useState({ title: '', story: '', targetAmount: '', photos: '', emotionalAppeal: 'Logical/Factual' });
+    const [ngo, setNgo] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [msg, setMsg] = useState({ text: '', type: '' });
 
     useEffect(() => {
-        if (!ngo) navigate('/login');
-        if (activeTab === 'active') fetchMyProjects();
-    }, [ngo, navigate, activeTab]);
+        fetchNgo();
+    }, [id]);
 
-    const fetchMyProjects = async () => {
+    const fetchNgo = async () => {
         setLoading(true);
         try {
-            const res = await activityApi.getMyActivities();
+            const res = await publicApi.getNgoById(id);
             if (res.success) {
-                setActiveProjects({
-                    needs: res.needs,
-                    campaigns: res.campaigns
-                });
+                setNgo(res.data);
             }
         } catch (error) {
-            setErrorMsg('Failed to fetch projects.');
+            setMsg({ text: 'Failed to fetch NGO details.', type: 'error' });
         } finally {
             setLoading(false);
         }
     };
 
-    const handleMilestoneProof = async (itemId, level, itemType) => {
-        const proofUrl = prompt('Enter proof image/document URL:');
-        if (!proofUrl) return;
-
-        let report = '';
-        if (level === 3) {
-            report = prompt('Enter final impact report text:');
-            if (!report) return;
-        }
-
+    const handleReview = async (action) => {
+        setMsg({ text: '', type: '' });
         try {
-            const res = await escrowApi.submitProof({ itemId, level, itemType, proofUrl, report });
+            const res = await activityApi.reviewItem(ngo._id, 'ngo', action);
             if (res.success) {
-                alert('Proof submitted for admin verification.');
-                fetchMyProjects();
+                setMsg({ text: res.message || 'Action completed.', type: 'success' });
+                setTimeout(() => navigate('/admin'), 1500);
             }
         } catch (error) {
-            alert(error.response?.data?.message || 'Submission failed.');
+            setMsg({ text: error.response?.data?.message || 'Error updating status', type: 'error' });
         }
     };
 
-    if (!ngo) return null;
+    if (loading) return <div className="text-center mt-20 text-slate-500 font-bold animate-pulse">Loading Verification Report...</div>;
+    if (!ngo) return <div className="text-center mt-20 text-red-500 font-bold">NGO Not Found</div>;
 
     return (
-        <div className="max-w-5xl mx-auto mt-20 px-4 animate-fade-in pb-20">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
-                <div>
-                    <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">NGO Command Center</h1>
-                    <p className="text-slate-500 mt-2">Manage your humanitarian activities and registration status.</p>
-                </div>
+        <div className="max-w-4xl mx-auto mt-10 px-4 pb-20 animate-fade-in">
+            <button
+                onClick={() => navigate('/admin')}
+                className="mb-8 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-800 transition-all flex items-center gap-2"
+            >
+                ← Back to Queue
+            </button>
 
-                <div className="flex items-center gap-4">
-                    <div className="modern-card p-4 bg-white flex flex-col items-center min-w-[120px]">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Trust Score</p>
-                        <p className={`text-2xl font-black ${ngo.trustScore >= 70 ? 'text-green-500' : 'text-orange-500'}`}>{ngo.trustScore}/100</p>
-                    </div>
-
-                    <div className="modern-card p-4 bg-white flex flex-col min-w-[200px]">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Onboarding Decision</p>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${ngo.status === 'verified' ? 'bg-green-500' : ngo.status === 'rejected' ? 'bg-red-500' : 'bg-orange-500 animate-pulse'}`}></div>
-                            <p className="text-sm font-black uppercase tracking-widest text-slate-800">{ngo.status === 'verified' ? 'Approved' : ngo.status === 'rejected' ? 'Rejected' : 'Under Review'}</p>
-                        </div>
-                        {ngo.status === 'rejected' && (
-                            <p className="text-[9px] font-bold text-red-400 mt-2 uppercase tracking-tighter leading-none">
-                                Reason: {ngo.suspensionReason || 'Insufficient details / Verification failed'}
-                            </p>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl modern-card-inset mb-12 w-fit mx-auto">
-                {['need', 'campaign', 'active'].map(tab => (
-                    <button key={tab} onClick={() => setActiveTab(tab)}
-                        className={`px-8 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${activeTab === tab ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>
-                        {tab === 'active' ? 'Active Projects' : `New ${tab}`}
-                    </button>
-                ))}
-            </div>
-
-            {activeTab === 'active' ? (
-                <div className="grid grid-cols-1 gap-8">
-                    {activeProjects.needs.concat(activeProjects.campaigns).length === 0 ? (
-                        <div className="modern-card p-20 text-center text-slate-400 font-bold">No active projects found. Launch one now!</div>
-                    ) : (
-                        activeProjects.needs.concat(activeProjects.campaigns).map(project => (
-                            <div key={project._id} className="modern-card p-6 bg-white">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-slate-800">{project.title}</h3>
-                                        <p className="text-sm text-slate-400 mt-1 uppercase font-bold">Progress: ₹{project.fundsRaised.toLocaleString()} / ₹{(project.amount || project.targetAmount).toLocaleString()}</p>
-                                    </div>
-                                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${project.status === 'live' ? 'bg-green-100 text-green-700' :
-                                        project.status === 'pending' ? 'bg-orange-100 text-orange-700' :
-                                            project.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                                'bg-blue-100 text-blue-700'
-                                        }`}>{project.status}</span>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {[1, 2, 3].map(level => {
-                                        const milestone = project.milestones?.find(m => m.level === level);
-                                        return (
-                                            <div key={level} className={`p-4 rounded-2xl border-2 transition-all ${milestone?.status === 'verified' ? 'bg-green-50/50 border-green-100' : milestone?.status === 'submitted' ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-slate-100'}`}>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Milestone {level}</p>
-                                                <p className="text-xs font-bold text-slate-700 mb-4">{level === 1 ? '40% - Initiation' : level === 2 ? '40% - Midpoint' : '20% - Completion'}</p>
-
-                                                {milestone?.status === 'verified' ? (
-                                                    <div className="text-green-600 font-black text-[10px] flex items-center gap-2">✅ FUNDS RELEASED</div>
-                                                ) : milestone?.status === 'submitted' ? (
-                                                    <div className="text-blue-600 font-black text-[10px] flex items-center gap-2">⏳ UNDER REVIEW</div>
-                                                ) : (
-                                                    <button onClick={() => handleMilestoneProof(project._id, level, project.amount ? 'Need' : 'Campaign')} className="w-full py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-600 hover:bg-slate-50 shadow-sm transition-all">SUBMIT PROOF</button>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            ) : (
-                <div className="modern-card p-10 bg-white">
-                    {/* ... Existing forms (summarized for briefness in this thought but I'll write the full code) ... */}
-                    {activeTab === 'need' ? (
-                        <form onSubmit={async (e) => {
-                            e.preventDefault();
-                            setLoading(true); setResult(null); setErrorMsg('');
-                            try {
-                                const res = await activityApi.submitNeed({ ngoId: ngo._id, ...needData });
-                                if (res.success) { setResult(res.data); setNeedData({ title: '', description: '', urgency: 'medium', amount: '', beneficiaries: '', deadline: '', documents: '' }); }
-                                else setErrorMsg(res.message);
-                            } catch (err) { setErrorMsg(err.response?.data?.message || 'Submission failed.'); }
-                            finally { setLoading(false); }
-                        }} className="space-y-6">
-                            <div className="mb-6 border-b border-slate-100 pb-4">
-                                <h2 className="text-2xl font-bold text-slate-800">Immediate Need</h2>
-                                <p className="text-sm text-slate-500 mt-1">For urgent, specific requirements (e.g. 50 blankets for winter).</p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Title</label>
-                                <input required type="text" value={needData.title} onChange={(e) => setNeedData({ ...needData, title: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-400" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div><label className="block text-sm font-semibold text-slate-700 mb-2">Amount (₹)</label><input required type="number" value={needData.amount} onChange={(e) => setNeedData({ ...needData, amount: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" /></div>
-                                <div><label className="block text-sm font-semibold text-slate-700 mb-2">Beneficiaries</label><input required type="number" value={needData.beneficiaries} onChange={(e) => setNeedData({ ...needData, beneficiaries: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" /></div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div><label className="block text-sm font-semibold text-slate-700 mb-2">Urgency</label><select value={needData.urgency} onChange={(e) => setNeedData({ ...needData, urgency: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
-                                <div><label className="block text-sm font-semibold text-slate-700 mb-2">Deadline</label><input type="date" value={needData.deadline} onChange={(e) => setNeedData({ ...needData, deadline: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" /></div>
-                            </div>
-                            <div><label className="block text-sm font-semibold text-slate-700 mb-2">Description</label><textarea required value={needData.description} onChange={(e) => setNeedData({ ...needData, description: e.target.value })} rows="4" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl resize-none"></textarea></div>
-                            <button type="submit" disabled={loading} className="w-full btn-primary py-4 text-sm font-bold uppercase tracking-widest">{loading ? 'AI Reviewing...' : 'Submit to AI Engine'}</button>
-                        </form>
-                    ) : (
-                        <form onSubmit={async (e) => {
-                            e.preventDefault();
-                            setLoading(true); setResult(null); setErrorMsg('');
-                            try {
-                                const res = await activityApi.createCampaign({ ngoId: ngo._id, ...campaignData });
-                                if (res.success) { setResult(res.data); setCampaignData({ title: '', story: '', targetAmount: '', photos: '', emotionalAppeal: 'Logical/Factual' }); }
-                                else setErrorMsg(res.message);
-                            } catch (err) { setErrorMsg(err.response?.data?.message || 'Creation failed.'); }
-                            finally { setLoading(false); }
-                        }} className="space-y-6">
-                            <div className="mb-6 border-b border-slate-100 pb-4">
-                                <h2 className="text-2xl font-bold text-slate-800">Long-Term Campaign</h2>
-                                <p className="text-sm text-slate-500 mt-1">For ongoing humanitarian projects with larger goals.</p>
-                            </div>
-                            <div><label className="block text-sm font-semibold text-slate-700 mb-2">Title</label><input required type="text" value={campaignData.title} onChange={(e) => setCampaignData({ ...campaignData, title: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" /></div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div><label className="block text-sm font-semibold text-slate-700 mb-2">Target Amount (₹)</label><input required type="number" value={campaignData.targetAmount} onChange={(e) => setCampaignData({ ...campaignData, targetAmount: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" /></div>
-                                <div><label className="block text-sm font-semibold text-slate-700 mb-2">Style</label><select value={campaignData.emotionalAppeal} onChange={(e) => setCampaignData({ ...campaignData, emotionalAppeal: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl"><option value="Logical/Factual">Logical</option><option value="Empathetic">Empathetic</option><option value="Urgent">Urgent</option></select></div>
-                            </div>
-                            <div><label className="block text-sm font-semibold text-slate-700 mb-2">Campaign Story</label><textarea required value={campaignData.story} onChange={(e) => setCampaignData({ ...campaignData, story: e.target.value })} rows="6" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl resize-none"></textarea></div>
-                            <button type="submit" disabled={loading} className="w-full btn-primary py-4 text-sm font-bold uppercase tracking-widest">{loading ? 'AI Processing...' : 'Launch Impact Campaign'}</button>
-                        </form>
-                    )}
+            {msg.text && (
+                <div className={`p-4 rounded-xl mb-6 flex items-center gap-3 font-bold text-xs shadow-sm ${msg.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'
+                    }`}>
+                    <span className="text-lg">{msg.type === 'error' ? '🚫' : '⚡'}</span>
+                    {msg.text}
                 </div>
             )}
+
+            <div className="modern-card p-0 bg-white overflow-hidden shadow-2xl border border-slate-100 flex flex-col">
+                {/* Verdict Header */}
+                <div className={`p-8 flex justify-between items-center ${ngo.aiVerdict?.includes('APPROVED') ? 'bg-green-500' :
+                    ngo.aiVerdict?.includes('FLAGGED') ? 'bg-red-500' : 'bg-slate-800'
+                    }`}>
+                    <div className="flex items-center gap-4">
+                        <span className="text-4xl">🤖</span>
+                        <div>
+                            <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">AI Trust Vetting Analysis</p>
+                            <h4 className="text-2xl font-black text-white uppercase tracking-tight">{ngo.aiVerdict || 'IN REVIEW'}</h4>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">Final Auth Score</p>
+                        <p className="text-5xl font-black text-white leading-none tracking-tighter">{ngo.trustScore}<span className="text-xl opacity-40">/100</span></p>
+                    </div>
+                </div>
+
+                <div className="p-10 space-y-10">
+                    <div className="flex justify-between items-end border-b border-slate-100 pb-8">
+                        <div>
+                            <h3 className="text-3xl font-black text-slate-800 uppercase tracking-tighter leading-tight mb-1">{ngo.name}</h3>
+                            <p className="text-sm text-slate-400 font-bold tracking-widest">{ngo.email}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Registration ID</p>
+                            <p className="text-xs font-bold text-slate-500">{ngo.fcraNumber}</p>
+                        </div>
+                    </div>
+
+                    {/* Step-by-Step Report */}
+                    <div>
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Automated 5-Check Security Report</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {[
+                                { label: 'FCRA Search', status: ngo.automatedChecks?.fcraVerified, sub: 'MHA Database' },
+                                { label: 'PAN Identity', status: ngo.automatedChecks?.panVerified, sub: 'Income Tax API' },
+                                { label: 'Bank Penny Drop', status: ngo.automatedChecks?.pennyDropSuccessful, sub: 'NPCI Network' },
+                                { label: 'Vision AI Scan', status: ngo.automatedChecks?.visionAuthentic, sub: 'Tamper Detection' },
+                                { label: 'Geo Address', status: ngo.automatedChecks?.addressMatched, sub: 'FCRA Cross-check' },
+                            ].map((check, i) => (
+                                <div key={i} className={`p-4 rounded-2xl border flex items-center justify-between ${check.status ? 'bg-green-50/50 border-green-100' : 'bg-red-50/50 border-red-100'
+                                    }`}>
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-800 uppercase leading-none mb-1">{check.label}</p>
+                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">{check.sub}</p>
+                                    </div>
+                                    <span className="text-lg">{check.status ? '✅' : '🚨'}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* AI Diagnostics */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-black text-green-500 uppercase tracking-widest border-b border-green-100 pb-2">Institutional Trust Boosts</p>
+                            {ngo.aiWhyHigh ? (
+                                ngo.aiWhyHigh.split(',').map((reason, idx) => (
+                                    <p key={idx} className="text-sm font-bold text-slate-700 flex items-start gap-2">
+                                        <span className="text-green-500">⚡</span> {reason.trim()}
+                                    </p>
+                                ))
+                            ) : <p className="text-sm text-slate-400 italic">No significant trust signals detected.</p>}
+                        </div>
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-black text-red-500 uppercase tracking-widest border-b border-red-100 pb-2">Detected Integrity Risks</p>
+                            {ngo.aiWhyNotHigher ? (
+                                ngo.aiWhyNotHigher.split(',').map((reason, idx) => (
+                                    <p key={idx} className="text-sm font-bold text-slate-700 flex items-start gap-2">
+                                        <span className="text-red-500">🚨</span> {reason.trim()}
+                                    </p>
+                                ))
+                            ) : <p className="text-sm text-slate-400 italic">No historical or digital flags found.</p>}
+                        </div>
+                    </div>
+
+                    {/* AI Decision Matrix (SHAP Simulation) */}
+                    <div>
+                        <div className="flex justify-between items-center mb-6">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">AI Decision Matrix / SHAP Breakdown</h4>
+                            <span className="text-[8px] font-black text-indigo-500 uppercase px-2 py-1 bg-indigo-50 rounded-md border border-indigo-100 italic">Gradient Boosting Feature Importance</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100">
+                            {[
+                                { label: 'FCRA Database Integrity', weight: 35, impact: 'high', val: ngo.automatedChecks?.fcraVerified ? '+35' : '-35' },
+                                { label: 'PAN Identity Consistency', weight: 25, impact: 'high', val: ngo.automatedChecks?.panVerified ? '+25' : '-25' },
+                                { label: 'Vision AI Authenticity', weight: 20, impact: 'med', val: ngo.automatedChecks?.visionAuthentic ? '+20' : '-40' },
+                                { label: 'Financial Footprint (Penny Drop)', weight: 15, impact: 'med', val: ngo.automatedChecks?.pennyDropSuccessful ? '+15' : '-15' },
+                                { label: 'Address Geo-Validation', weight: 5, impact: 'low', val: ngo.automatedChecks?.addressMatched ? '+5' : '-10' },
+                                { label: 'Fraud Heuristics (Isolation Forest)', weight: 0, impact: 'risk', val: ngo.aiFraudStatus === 'HIGH RISK' ? '-60' : '+0' },
+                            ].map((feature, i) => (
+                                <div key={i} className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">{feature.label}</p>
+                                        <p className={`text-[10px] font-black ${feature.val.includes('-') ? 'text-red-500' : 'text-green-500'}`}>{feature.val} pts</p>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full rounded-full ${feature.val.includes('-') ? 'bg-red-400' : 'bg-indigo-500'}`}
+                                            style={{ width: `${Math.abs(feature.val.split(' ')[0])}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Fraud Detection Box */}
+                    <div className={`p-6 rounded-3xl border-2 border-dashed ${ngo.aiFraudStatus === 'HIGH RISK' ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">{ngo.aiFraudStatus === 'HIGH RISK' ? '⚠️' : '🛡️'}</span>
+                                <p className={`text-xs font-black uppercase tracking-widest ${ngo.aiFraudStatus === 'HIGH RISK' ? 'text-red-500' : 'text-green-600'}`}>Fraud Pattern Analysis: {ngo.aiFraudStatus}</p>
+                            </div>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm transition-all hover:scale-105 cursor-help">Isolation Forest Model v2.4</span>
+                        </div>
+                        <p className="text-base font-bold text-slate-800 leading-snug">
+                            {ngo.aiOneFlag || 'Heuristic engine confirms normal metadata and network signature.'}
+                        </p>
+                        {ngo.aiSuggestion && (
+                            <div className="mt-4 flex flex-col gap-2">
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Internal Recommendation</p>
+                                <p className="text-xs font-black text-indigo-500 uppercase tracking-tighter bg-white p-3 rounded-xl border border-indigo-100 shadow-sm inline-block">
+                                    {ngo.aiSuggestion}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Document Preview */}
+                    <div className="pt-4">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 text-center">Physical Document Evidence</p>
+                        <div className="relative group overflow-hidden rounded-3xl border-4 border-slate-50 shadow-inner bg-slate-100 aspect-video flex items-center justify-center">
+                            <div className="text-center">
+                                <p className="text-4xl mb-2">📄</p>
+                                <a
+                                    href={ngo.registrationCertificate}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-8 py-3 bg-white text-slate-800 text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-slate-900 hover:text-white shadow-xl transition-all inline-block"
+                                >
+                                    Open Full Document Resolution
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sticky Action Bar */}
+                <div className="p-10 bg-slate-50/50 border-t border-slate-100 space-y-6">
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Reviewer's Final Assessment (Required for Audit Trail)</p>
+                        <textarea
+                            placeholder="State the reason for approval or rejection here..."
+                            id="reviewReason"
+                            className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all shadow-sm"
+                            rows="2"
+                        ></textarea>
+                    </div>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => {
+                                const reason = document.getElementById('reviewReason').value;
+                                if (!reason) return alert('Please provide an assessment reason.');
+                                handleReview('approve');
+                            }}
+                            className="flex-2 py-5 bg-slate-900 text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-black shadow-2xl shadow-slate-900/40 active:scale-95 transition-all text-center"
+                        >
+                            Verify Institutional Trust
+                        </button>
+                        <button
+                            onClick={() => {
+                                const reason = document.getElementById('reviewReason').value;
+                                if (!reason) return alert('Please provide an assessment reason.');
+                                handleReview('reject');
+                            }}
+                            className="flex-1 py-5 bg-white border-2 border-slate-200 text-slate-400 text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-red-50 hover:text-red-500 hover:border-red-200 active:scale-95 transition-all text-center"
+                        >
+                            Reject Application
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

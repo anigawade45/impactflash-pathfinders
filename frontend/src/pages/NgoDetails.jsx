@@ -92,13 +92,12 @@ export default function NgoDetails() {
 
                     {/* Step-by-Step Report */}
                     <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Automated 6-Check Security Report</h4>
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Automated 5-Check Security Report</h4>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {[
                                 { label: 'FCRA Search', status: ngo.automatedChecks?.fcraVerified, sub: 'MHA Database' },
                                 { label: 'PAN Identity', status: ngo.automatedChecks?.panVerified, sub: 'Income Tax API' },
                                 { label: 'Bank Penny Drop', status: ngo.automatedChecks?.pennyDropSuccessful, sub: 'NPCI Network' },
-                                { label: 'Aadhaar OTP', status: ngo.automatedChecks?.aadhaarVerified, sub: 'UIDAI Identity' },
                                 { label: 'Vision AI Scan', status: ngo.automatedChecks?.visionAuthentic, sub: 'Tamper Detection' },
                                 { label: 'Geo Address', status: ngo.automatedChecks?.addressMatched, sub: 'FCRA Cross-check' },
                             ].map((check, i) => (

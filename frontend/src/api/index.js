@@ -24,6 +24,10 @@ export const authApi = {
         const response = await api.post('/ngos/register', data);
         return response.data;
     },
+    verifyPan: async (panCard, name) => {
+        const response = await api.post('/ngos/verify-pan', { panCard, name });
+        return response.data;
+    },
     registerDonor: async (data) => {
         const response = await api.post('/donors/register', data);
         return response.data;

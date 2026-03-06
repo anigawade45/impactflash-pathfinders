@@ -71,8 +71,16 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const verifyPan = async (panCard, name) => {
+        try {
+            return await authApi.verifyPan(panCard, name);
+        } catch (error) {
+            throw new Error(error.response?.data?.message || 'PAN Verification failed');
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, registerDonor, logout, checkAuth }}>
+        <AuthContext.Provider value={{ user, loading, login, register, registerDonor, verifyPan, logout, checkAuth }}>
             {children}
         </AuthContext.Provider>
     );
