@@ -42,7 +42,8 @@ exports.suggestSplit = async (req, res) => {
                 title: c.title,
                 ngoId: c.ngoId._id,
                 ngoName: c.ngoId.name,
-                category: c.category
+                category: c.category,
+                funding_gap: Math.max(0, (c.amount || c.targetAmount) - (c.fundsRaised || 0))
             }));
 
         if (candidates.length === 0) {
@@ -53,28 +54,35 @@ exports.suggestSplit = async (req, res) => {
         try {
             const aiResponse = await axios.post('http://localhost:8000/api/suggest-split', {
                 amount: donationAmount,
-                candidates: candidates
+                candidates: candidates,
+                donor_causes: donor.causes || []
             });
             return res.status(200).json({ success: true, suggestion: aiResponse.data.splits });
         } catch (aiErr) {
             console.error('AI Suggestion Error:', aiErr.message);
             // Fallback (Simple Split)
-            const suggestion = candidates.slice(0, 2).map((item, index) => ({
-                targetId: item._id,
-                targetType: item.type,
-                title: item.title,
-                ngoId: item.ngoId,
-                ngoName: item.ngoName,
-                amount: index === 0 ? donationAmount * 0.6 : donationAmount * 0.4,
-                percentage: index === 0 ? 60 : 40,
-                reason: "High priority requirement matched to your profile."
-            }));
+            const suggestion = candidates.slice(0, 2).map((item, index) => {
+                const amount = index === 0 ? donationAmount * 0.6 : donationAmount * 0.4;
+                return {
+                    targetId: item._id,
+                    targetType: item.type,
+                    title: item.title,
+                    ngoId: item.ngoId,
+                    ngoName: item.ngoName,
+                    amount: Math.min(amount, item.funding_gap),
+                    percentage: index === 0 ? 60 : 40,
+                    reason: "High priority requirement matched to your profile."
+                };
+            });
             return res.status(200).json({ success: true, suggestion });
         }
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock_key');
 
 exports.initiateDonation = async (req, res) => {
     try {
@@ -87,82 +95,74 @@ exports.initiateDonation = async (req, res) => {
             await donor.save();
         }
 
-        // 1. Layer 3: Fraud Prevention
+        // 1. Layer 3: Fraud Prevention (Self-Dealing Checks)
         for (const item of items) {
-            // 1a. Self-dealing check
             const ngo = await NGO.findById(item.ngoId);
-            if (ngo && donor.panCard && donor.panCard === ngo.panCard) {
-                return res.status(403).json({ success: false, message: `Self-Dealing Alert: Your tax ID matches the NGO. Transaction blocked.` });
-            }
-        }
+            if (!ngo) continue;
 
-        // 1b. Identity-based conflict (Donor's explicit list)
-        for (const item of items) {
+            // 1a. PAN match check
+            if (donor.panCard && donor.panCard === ngo.panCard) {
+                return res.status(403).json({ success: false, message: `Self-Dealing Alert: Your tax ID matches the NGO ${ngo.name}. Transaction blocked.` });
+            }
+
+            // 1b. Email match check
+            if (donor.email.toLowerCase() === ngo.email.toLowerCase()) {
+                return res.status(403).json({ success: false, message: `Self-Dealing Alert: Your email matches NGO ${ngo.name}. Identity conflict detected.` });
+            }
+
+            // 1c. Explicit conflict list check
             if (donor.conflicts && donor.conflicts.includes(item.ngoId)) {
-                return res.status(403).json({ success: false, message: `Conflict detected: You are associated with this NGO.` });
+                return res.status(403).json({ success: false, message: `Conflict detected: You are associated with NGO ${ngo.name}.` });
             }
         }
 
-        // 1c. Circular Ring Detection via AI engine
-        try {
-            // Get last 100 successful donations to build graph
-            const recentDonations = await Donation.find({ paymentStatus: 'completed' }).limit(100);
-            const transactions = recentDonations.map(d => ({
-                donor_id: d.donorId.toString(),
-                ngo_id: d.items[0].ngoId.toString(),
-                amount: d.totalAmount
-            }));
-            // Add current proposed transaction
-            transactions.push({ donor_id: donorId.toString(), ngo_id: items[0].ngoId.toString(), amount: totalAmount });
-
-            const aiFraudRes = await axios.post('http://localhost:8000/api/fraud/ring-check', { transactions });
-            if (!aiFraudRes.data.isSafe) {
-                return res.status(403).json({
-                    success: false,
-                    message: `Fraud Flag: Suspicious circular donation pattern detected by AI network analysis.`
-                });
+        // 2. Create Stripe Checkout Session
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: items.map(item => ({
+                price_data: {
+                    currency: 'inr',
+                    product_data: {
+                        name: `Donation to ${item.title}`,
+                        description: `Support for ${item.category}`,
+                    },
+                    unit_amount: item.amount * 100, // Stripe expects amount in paise (cents equivalent)
+                },
+                quantity: 1,
+            })),
+            mode: 'payment',
+            success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/donor-dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/explore?canceled=true`,
+            metadata: {
+                donorId: donorId.toString(),
+                visibility,
+                items: JSON.stringify(items.map(i => ({
+                    targetId: i.targetId,
+                    targetType: i.targetType,
+                    amount: i.amount,
+                    ngoId: i.ngoId,
+                    title: i.title,
+                    category: i.category
+                })))
             }
-        } catch (aiErr) {
-            console.error('AI Fraud Check failed, proceeding with manual safety checks:', aiErr.message);
-        }
-
-        // 2. Create Razorpay Order
-        let rzpOrder;
-        const amountInPaise = totalAmount * 100;
-
-        if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID === 'rzp_test_mock_id') {
-            // Mocking order for development without keys
-            console.log('[MOCK] Creating mock Razorpay order...');
-            rzpOrder = {
-                id: 'order_mock_' + Date.now(),
-                amount: amountInPaise
-            };
-        } else {
-            const options = {
-                amount: amountInPaise,
-                currency: "INR",
-                receipt: `rcpt_${Date.now()}`
-            };
-            rzpOrder = await razorpay.orders.create(options);
-        }
+        });
 
         // 3. Save pending donation
         const donation = new Donation({
             donorId,
             items,
             totalAmount,
-            razorpayOrderId: rzpOrder.id,
+            stripeSessionId: session.id,
             visibility: visibility || donor.defaultVisibility || 'anonymous',
             isSmartDonate: items.length > 1
         });
 
         await donation.save();
 
-        res.status(201).json({
+        res.status(200).json({
             success: true,
-            orderId: rzpOrder.id,
-            amount: rzpOrder.amount,
-            donationId: donation._id
+            sessionId: session.id,
+            url: session.url
         });
 
     } catch (error) {
@@ -173,34 +173,107 @@ exports.initiateDonation = async (req, res) => {
 
 exports.verifyPayment = async (req, res) => {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, donationId } = req.body;
+        const { session_id } = req.body;
 
-        const sign = razorpay_order_id + "|" + razorpay_payment_id;
-        const expectedSign = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || 'mock_secret')
-            .update(sign.toString())
-            .digest("hex");
+        const session = await stripe.checkout.sessions.retrieve(session_id);
 
-        if (razorpay_signature === expectedSign) {
-            // Payment verified
-            const donation = await Donation.findById(donationId);
-            donation.paymentStatus = 'completed';
-            donation.razorpayPaymentId = razorpay_payment_id;
-            donation.razorpaySignature = razorpay_signature;
-            donation.receiptGenerated = true; // 80G generation triggered
-            await donation.save();
+        if (session.payment_status === 'paid') {
+            const donation = await Donation.findOne({ stripeSessionId: session_id });
+            if (!donation) return res.status(404).json({ success: false, message: 'Donation not found' });
+
+            if (donation.paymentStatus !== 'completed') {
+                donation.paymentStatus = 'completed';
+                donation.stripePaymentIntentId = session.payment_intent;
+                donation.receiptGenerated = true;
+                await donation.save();
+
+                // Trigger Escrow logic
+                await updateEscrowAndFunds(donation);
+            }
 
             res.status(200).json({
                 success: true,
-                message: "Payment verified and receipt generated.",
-                receiptUrl: `/api/donations/receipt/${donationId}` // Mock URL
+                message: "Payment verified successfully.",
+                receiptUrl: `/api/donations/receipt/${donation._id}`
             });
         } else {
-            res.status(400).json({ success: false, message: "Invalid payment signature" });
+            res.status(400).json({ success: false, message: "Payment not completed" });
         }
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
+};
+
+// Internal function to handle the 40-40-20 automatic escrow release logic
+const updateEscrowAndFunds = async (donation) => {
+    const Need = require('../models/Need');
+    const Campaign = require('../models/Campaign');
+
+    for (const item of donation.items) {
+        const Model = item.targetType === 'Need' ? Need : Campaign;
+        const project = await Model.findById(item.targetId);
+        if (!project) continue;
+
+        project.fundsRaised += item.amount;
+
+        const targetAmount = project.amount || project.targetAmount;
+        const progress = (project.fundsRaised / targetAmount) * 100;
+
+        // Tranche 1: 40% Release at 40% reach
+        if (progress >= 40 && !project.milestones.find(m => m.level === 1 && m.status === 'verified')) {
+            let m1 = project.milestones.find(m => m.level === 1);
+            if (!m1) {
+                project.milestones.push({ level: 1, title: 'Initial Impact Funds (40%)', percentage: 40, status: 'verified', releasedAt: new Date() });
+            } else {
+                m1.status = 'verified';
+                m1.releasedAt = new Date();
+            }
+        }
+
+        // Tranche 2: 40% Release at 80% reach
+        if (progress >= 80 && !project.milestones.find(m => m.level === 2 && m.status === 'verified')) {
+            let m2 = project.milestones.find(m => m.level === 2);
+            if (!m2) {
+                project.milestones.push({ level: 2, title: 'Operational Funds (40%)', percentage: 40, status: 'verified', releasedAt: new Date() });
+            } else {
+                m2.status = 'verified';
+                m2.releasedAt = new Date();
+            }
+        }
+
+        // Final Completion Check
+        if (progress >= 100 && project.status !== 'completed') {
+            project.status = 'completed';
+        }
+
+        await project.save();
+    }
+};
+
+exports.handleStripeWebhook = async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const donation = await Donation.findOne({ stripeSessionId: session.id });
+
+        if (donation && donation.paymentStatus !== 'completed') {
+            donation.paymentStatus = 'completed';
+            donation.stripePaymentIntentId = session.payment_intent;
+            donation.receiptGenerated = true;
+            await donation.save();
+            await updateEscrowAndFunds(donation);
+        }
+    }
+
+    res.json({ received: true });
 };
 
 exports.getReceipt = async (req, res) => {
