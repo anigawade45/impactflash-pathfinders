@@ -2,34 +2,115 @@ import React, { useState, useEffect } from 'react';
 import { donationApi } from '../../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, ShieldCheck, TrendingUp, Download, PieChart, Heart, Award, ArrowRight, Activity, Zap } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function DonorDashboard() {
     const [donations, setDonations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ total: 0, impactScore: 0 });
+    const [suggestions, setSuggestions] = useState([]);
+    const [affinity, setAffinity] = useState([]);
+    const { user } = useAuth();
+    const navigate = useNavigate();
 
     useEffect(() => {
-        fetchHistory();
-    }, []);
+        if (user) {
+            fetchDashboardData();
+        }
+    }, [user]);
+
+    const fetchDashboardData = async () => {
+        setLoading(true);
+        await Promise.all([
+            fetchHistory(),
+            fetchSuggestions()
+        ]);
+        setLoading(false);
+    };
 
     const fetchHistory = async () => {
-        setLoading(true);
         try {
             const res = await donationApi.getHistory();
             if (res.success) {
-                setDonations(res.data);
-                const total = res.data.reduce((acc, curr) => acc + curr.totalAmount, 0);
+                const completedDonations = res.data.filter(d => d.paymentStatus === 'completed');
+                setDonations(completedDonations);
+
+                const total = completedDonations.reduce((acc, curr) => acc + curr.totalAmount, 0);
                 setStats({
                     total,
-                    impactScore: Math.floor(total / 1000) * 10 + res.data.length * 5
+                    impactScore: Math.floor(total / 1000) * 15 + completedDonations.length * 25
                 });
+
+                calculateAffinity(completedDonations);
             }
         } catch (error) {
             console.error("Failed to fetch donation history");
-        } finally {
-            setLoading(false);
         }
     };
+
+    const fetchSuggestions = async () => {
+        try {
+            const res = await donationApi.getSuggestion();
+            if (res.success) {
+                setSuggestions(res.data || res.suggestion || []);
+            }
+        } catch (error) {
+            console.error("Failed to fetch suggestions");
+        }
+    };
+
+    const calculateAffinity = (history) => {
+        // Default from profile causes
+        const baseCauses = user?.causes || ['Health', 'Education'];
+        const categories = {};
+
+        // Count from history
+        history.forEach(d => {
+            d.items.forEach(item => {
+                // If item has a category, use it, otherwise default to a known one if possible
+                // For now, let's assume we might need to fetch project details or use a fixed map 
+                // but let's try to infer or use base if empty
+                const cat = item.category || (baseCauses[0]);
+                categories[cat] = (categories[cat] || 0) + item.amount;
+            });
+        });
+
+        const totalSpent = Object.values(categories).reduce((a, b) => a + b, 0);
+
+        const dynamicAffinity = Object.entries(categories).map(([label, amount]) => ({
+            label,
+            percentage: totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0,
+            icon: getIconForCategory(label)
+        })).sort((a, b) => b.percentage - a.percentage);
+
+        // If no donations, show 0% for profile causes
+        if (dynamicAffinity.length === 0) {
+            setAffinity(baseCauses.map(c => ({ label: c, percentage: 0, icon: getIconForCategory(c) })));
+        } else {
+            setAffinity(dynamicAffinity);
+        }
+    };
+
+    const getIconForCategory = (cat) => {
+        const map = {
+            'Health': '🏥',
+            'Education': '📚',
+            'Environment': '🌍',
+            'Food': '🍲',
+            'Disaster': '🚨',
+            'Animal': '🐾'
+        };
+        return map[cat] || '✨';
+    };
+
+    const getTrustTier = () => {
+        if (stats.total >= 50000) return { name: 'Tier 3 / Sovereign', color: 'bg-indigo-500', progress: 100, icon: '👑' };
+        if (stats.total >= 10000) return { name: 'Tier 2 / Vanguard', color: 'bg-orange-500', progress: 75, icon: '🛡️' };
+        return { name: 'Tier 1 / Guardian', color: 'bg-slate-500', progress: 30, icon: '🌱' };
+    };
+
+    const tier = getTrustTier();
 
     const handleDownloadReceipt = async (id) => {
         try {
@@ -59,11 +140,11 @@ export default function DonorDashboard() {
                             <span className="text-[10px] font-black text-orange-600 uppercase tracking-[0.3em]">Personal Intelligence Hub</span>
                         </div>
                         <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter leading-[0.9] mb-8">
-                            Your Legacy <br />
-                            <span className="text-gradient">of Impact</span>
+                            Hello, <br />
+                            <span className="text-gradient">{user?.name?.split(' ')[0] || 'Donor'}</span>
                         </h1>
                         <p className="text-xl text-slate-500 font-medium leading-relaxed max-w-xl">
-                            Real-time tracking of your humanitarian portfolio. Every rupee is accounted for in our zero-trust ecosystem.
+                            Real-time tracking of your humanitarian portfolio. Every rupee is accounted for in our zero-trust system.
                         </p>
                     </motion.div>
 
@@ -137,7 +218,8 @@ export default function DonorDashboard() {
 
                                     <div className="bg-slate-50/50 px-8 py-4 flex flex-wrap gap-2 group-hover:bg-orange-50 transition-colors border-t border-slate-50">
                                         {donation.items.map((item, i) => (
-                                            <span key={i} className="px-3 py-1 bg-white border border-slate-100 rounded-full text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                            <span key={i} className="px-3 py-1 bg-white border border-slate-100 rounded-full text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
                                                 {item.title}
                                             </span>
                                         ))}
@@ -157,30 +239,57 @@ export default function DonorDashboard() {
                         {/* Trust Tier Card */}
                         <motion.div
                             whileHover={{ y: -5 }}
-                            className="modern-card p-10 bg-slate-900 text-white relative overflow-hidden group"
+                            className="modern-card p-10 bg-slate-900 text-white relative overflow-hidden group border-none"
                         >
                             <div className="absolute inset-0 noise-bg opacity-10"></div>
-                            <div className="absolute top-0 right-0 w-48 h-48 bg-orange-500/20 rounded-full blur-[80px] -mr-24 -mt-24 group-hover:scale-125 transition-transform duration-1000"></div>
+                            <div className={`absolute top-0 right-0 w-48 h-48 ${tier.color}/20 rounded-full blur-[80px] -mr-24 -mt-24 group-hover:scale-125 transition-transform duration-1000`}></div>
 
-                            <Award className="w-12 h-12 text-orange-500 mb-8" />
+                            <div className="text-4xl mb-8">{tier.icon}</div>
                             <h3 className="text-2xl font-black tracking-tight mb-4 uppercase">Trust Profile</h3>
-                            <p className="text-sm text-slate-400 font-medium mb-10 leading-relaxed">Your account has reached Level 2 Transparency. Verified contributions are now automatically eligible for immediate tax benefits.</p>
+                            <p className="text-sm text-slate-400 font-medium mb-10 leading-relaxed">
+                                Your account is currently at <span className="text-white">{tier.name}</span>.
+                                {stats.total < 10000 ? " Contribute ₹" + (10000 - stats.total).toLocaleString() + " more to reach Tier 2." : " 80G tax benefits are now priority processed."}
+                            </p>
 
                             <div className="space-y-6">
                                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                                    <span className="text-slate-400">Current Phase</span>
-                                    <span className="text-orange-500">Tier 1 Elite</span>
+                                    <span className="text-slate-400">Progress to Next Tier</span>
+                                    <span className="text-orange-500">{tier.progress}% Complete</span>
                                 </div>
                                 <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden p-0.5 border border-white/5">
                                     <motion.div
                                         initial={{ width: 0 }}
-                                        animate={{ width: '85%' }}
+                                        animate={{ width: `${tier.progress}%` }}
                                         transition={{ duration: 1.5, delay: 0.5 }}
-                                        className="bg-orange-500 h-full rounded-full shadow-[0_0_20px_rgba(249,115,22,0.4)]"
+                                        className={`${tier.color} h-full rounded-full shadow-[0_0_20px_rgba(249,115,22,0.4)]`}
                                     ></motion.div>
                                 </div>
                             </div>
                         </motion.div>
+
+                        {/* AI Recommendations */}
+                        {suggestions.length > 0 && (
+                            <div className="modern-card p-10 bg-white border border-slate-200">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="p-3 bg-orange-50 rounded-2xl">
+                                        <Zap className="w-6 h-6 text-orange-500" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">AI MATCHES</h3>
+                                </div>
+                                <div className="space-y-4">
+                                    {suggestions.map((item, i) => (
+                                        <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-orange-200 transition-all cursor-pointer group" onClick={() => navigate(`/projects/${item.targetId}`)}>
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="text-[8px] font-black px-2 py-0.5 bg-white rounded border border-slate-200 text-slate-400 uppercase tracking-widest">Recommended</span>
+                                                <span className="text-[10px] font-black text-orange-600">{item.percentage}% Fit</span>
+                                            </div>
+                                            <h4 className="text-sm font-black text-slate-800 leading-tight mb-1 group-hover:text-orange-600 transition-colors">{item.title}</h4>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">by {item.ngoName}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Cause Affinity */}
                         <div className="modern-card p-10 bg-white border border-slate-100">
@@ -192,9 +301,12 @@ export default function DonorDashboard() {
                             </div>
 
                             <div className="space-y-8">
-                                <AffinityBar icon="🏥" label="Health" percentage={60} color="bg-orange-500" />
-                                <AffinityBar icon="📚" label="Education" percentage={40} color="bg-slate-900" />
-                                <AffinityBar icon="🌍" label="Climat" percentage={0} color="bg-slate-400" />
+                                {affinity.map((item, i) => (
+                                    <AffinityBar key={i} icon={item.icon} label={item.label} percentage={item.percentage} color={i === 0 ? "bg-orange-500" : "bg-slate-900"} />
+                                ))}
+                                {affinity.length === 0 && (
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center py-4">No data mapped yet</p>
+                                )}
                             </div>
 
                             <button

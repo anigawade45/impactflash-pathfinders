@@ -100,7 +100,7 @@ export const publicApi = {
 };
 
 export const donationApi = {
-    getSuggestion: async () => (await api.get('/donations/suggest')).data,
+    getSuggestion: async (amount) => (await api.post('/donations/suggest', { amount })).data,
     initiate: async (data) => (await api.post('/donations/initiate', data)).data,
     verify: async (data) => (await api.post('/donations/verify', data)).data,
     getHistory: async () => (await api.get('/donations/my-donations')).data,

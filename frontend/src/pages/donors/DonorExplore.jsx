@@ -14,19 +14,13 @@ export default function DonorExplore() {
     const [showModal, setShowModal] = useState(false);
     const [checkoutItems, setCheckoutItems] = useState([]);
     const [totalAmount, setTotalAmount] = useState(0);
+    const [smartAmount, setSmartAmount] = useState(1000);
     const navigate = useNavigate();
 
     const handleSmartDonate = () => {
-        const donationAmount = 10000;
-        const items = suggestedSplit.map(s => ({
-            targetId: s.targetId,
-            targetType: s.targetType,
-            amount: (s.percentage / 100) * donationAmount,
-            title: s.title,
-            ngoId: s.ngoId
-        }));
-        setCheckoutItems(items);
-        setTotalAmount(donationAmount);
+        if (smartAmount < 100) return alert("Minimum donation is ₹100");
+        setCheckoutItems(suggestedSplit);
+        setTotalAmount(smartAmount);
         setShowModal(true);
     };
 
@@ -65,9 +59,10 @@ export default function DonorExplore() {
     };
 
     const fetchSmartSuggestion = async () => {
+        if (smartAmount < 100) return alert("Minimum donation is ₹100");
         setLoading(true);
         try {
-            const res = await donationApi.getSuggestion();
+            const res = await donationApi.getSuggestion(smartAmount);
             if (res.success) {
                 setSuggestedSplit(res.suggestion);
                 setMode('smart');
@@ -136,8 +131,30 @@ export default function DonorExplore() {
                                         </div>
                                         <div>
                                             <h2 className="text-3xl font-black tracking-tight">AI Multi-Allocation Loop</h2>
-                                            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Optimized for Max Humanitarian ROI</p>
+                                            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest italic">Linear Programming Optimization</p>
                                         </div>
+                                    </div>
+
+                                    <div className="mb-12 bg-white/5 p-8 rounded-4xl border border-white/10">
+                                        <label className="block text-[10px] font-black text-orange-400 uppercase tracking-widest mb-4">Total Intent (Amount)</label>
+                                        <div className="flex items-center gap-6">
+                                            <div className="flex-1 relative">
+                                                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-3xl font-black text-white/30">₹</span>
+                                                <input
+                                                    type="number"
+                                                    value={smartAmount}
+                                                    onChange={(e) => setSmartAmount(Number(e.target.value))}
+                                                    className="w-full bg-white/5 border-2 border-white/10 rounded-3xl py-6 pl-12 pr-6 text-3xl font-black text-white focus:outline-none focus:border-orange-500 transition-all"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={fetchSmartSuggestion}
+                                                className="px-10 py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-3xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 shadow-2xl shadow-orange-500/20"
+                                            >
+                                                Recalculate
+                                            </button>
+                                        </div>
+                                        <p className="text-[9px] font-bold text-slate-500 mt-4 uppercase tracking-[0.2em]">Note: AI splits are recalculated using real-time urgency weights.</p>
                                     </div>
 
                                     <div className="space-y-6">
@@ -157,9 +174,9 @@ export default function DonorExplore() {
                                                         <h3 className="text-3xl font-black text-white mb-2">{item.title}</h3>
                                                         <p className="text-slate-400 font-bold uppercase tracking-wider text-xs">{item.ngoName}</p>
                                                     </div>
-                                                    <div className="text-right p-4 bg-white/5 rounded-2xl border border-white/5 group-hover/item:border-orange-500/20 transition-all">
-                                                        <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Reasoning</p>
-                                                        <p className="text-xs text-slate-300 font-medium leading-relaxed italic">"{item.reason}"</p>
+                                                    <div className="text-right p-4 bg-white/5 rounded-2xl border border-white/5 group-hover/item:border-orange-500/20 transition-all max-w-[200px]">
+                                                        <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">AI Reasoning</p>
+                                                        <p className="text-[10px] text-slate-300 font-medium leading-relaxed italic">"{item.reason}"</p>
                                                     </div>
                                                 </div>
                                                 <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden p-0.5 border border-white/5">
