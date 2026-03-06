@@ -14,41 +14,60 @@ const razorpay = new Razorpay({
 
 exports.suggestSplit = async (req, res) => {
     try {
+        const { amount } = req.body;
+        const donationAmount = Math.max(100, amount || 1000); // Minimum ₹100
+
         const donor = await Donor.findById(req.userId);
         if (!donor) return res.status(404).json({ success: false, message: 'Donor not found' });
 
         const needs = await Need.find({ status: 'live' }).populate('ngoId', 'name');
         const campaigns = await Campaign.find({ status: 'live' }).populate('ngoId', 'name');
 
-        let candidates = [...needs.map(n => ({ ...n._doc, type: 'Need' })), ...campaigns.map(c => ({ ...c._doc, type: 'Campaign' }))];
+        let rawCandidates = [...needs.map(n => ({ ...n._doc, type: 'Need' })), ...campaigns.map(c => ({ ...c._doc, type: 'Campaign' }))];
 
+        // Filter by donor causes if available
+        let filtered = rawCandidates;
         if (donor.causes && donor.causes.length > 0) {
-            candidates = candidates.filter(c => donor.causes.includes(c.category));
+            filtered = rawCandidates.filter(c => donor.causes.includes(c.category));
         }
 
+        const candidates = (filtered.length > 0 ? filtered : rawCandidates)
+            .sort((a, b) => b.aiScore - a.aiScore)
+            .slice(0, 5)
+            .map(c => ({
+                _id: c._id,
+                aiScore: c.aiScore,
+                urgency: c.urgency,
+                type: c.type,
+                title: c.title,
+                ngoId: c.ngoId._id,
+                ngoName: c.ngoId.name,
+                category: c.category
+            }));
+
         if (candidates.length === 0) {
-            return res.status(200).json({ success: true, suggestion: [], message: 'No active causes found matching your interests.' });
+            return res.status(200).json({ success: true, suggestion: [], message: 'No active causes found.' });
         }
 
         // Call AI Engine for Optimal Split
         try {
             const aiResponse = await axios.post('http://localhost:8000/api/suggest-split', {
-                amount: 1000, // Normalized for suggesting percentages
-                candidates: candidates.slice(0, 5) // Send top 5 to AI
+                amount: donationAmount,
+                candidates: candidates
             });
             return res.status(200).json({ success: true, suggestion: aiResponse.data.splits });
         } catch (aiErr) {
             console.error('AI Suggestion Error:', aiErr.message);
-            // Fallback to basic top 2
-            const selected = candidates.slice(0, 2);
-            const suggestion = selected.map((item, index) => ({
+            // Fallback (Simple Split)
+            const suggestion = candidates.slice(0, 2).map((item, index) => ({
                 targetId: item._id,
                 targetType: item.type,
                 title: item.title,
-                ngoId: item.ngoId._id,
-                ngoName: item.ngoId.name,
+                ngoId: item.ngoId,
+                ngoName: item.ngoName,
+                amount: index === 0 ? donationAmount * 0.6 : donationAmount * 0.4,
                 percentage: index === 0 ? 60 : 40,
-                reason: item.urgency === 'high' ? 'High urgency requirement' : `High impact AI Score (${item.aiScore})`
+                reason: "High priority requirement matched to your profile."
             }));
             return res.status(200).json({ success: true, suggestion });
         }
@@ -133,7 +152,7 @@ exports.initiateDonation = async (req, res) => {
             items,
             totalAmount,
             razorpayOrderId: rzpOrder.id,
-            visibility,
+            visibility: visibility || donor.defaultVisibility || 'anonymous',
             isSmartDonate: items.length > 1
         });
 

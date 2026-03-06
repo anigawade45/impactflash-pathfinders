@@ -5,7 +5,6 @@ const campaignSchema = new mongoose.Schema({
     title: { type: String, required: true },
     category: { type: String, required: true },
     story: { type: String, required: true },
-    emotionalAppeal: { type: String, required: true },
     targetAmount: { type: Number, required: true },
     photos: [{ type: String }],
     documents: [{ type: String }], // Layer 1: Registration or specific proof
