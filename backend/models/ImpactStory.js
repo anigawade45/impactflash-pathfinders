@@ -16,9 +16,11 @@ const impactStorySchema = new mongoose.Schema({
     beneficiaryCount: { type: Number },
     proofOfWork: { type: String }, // Final report URL
     donors: [{
+        donorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Donor' },
         name: { type: String },
         isAnonymous: { type: Boolean, default: true }
-    }]
+    }],
+    aiValidation: { type: Object }
 }, { timestamps: true });
 
 module.exports = mongoose.model('ImpactStory', impactStorySchema);
