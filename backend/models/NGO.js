@@ -31,6 +31,7 @@ const ngoSchema = new mongoose.Schema({
     trustScore: { type: Number, default: 0, min: 0, max: 100 },
     impactScore: { type: Number, default: 0, min: 0, max: 100 },
     suspensionReason: { type: String },
+    adminFeedback: { type: String },
     aiVerdict: { type: String },
     aiWhyHigh: { type: String },
     aiWhyNotHigher: { type: String },

@@ -13,6 +13,7 @@ const campaignSchema = new mongoose.Schema({
     fraudFlag: { type: Boolean, default: false },
     visionAuthentic: { type: Boolean, default: false },
     explanation: { type: String },
+    adminFeedback: { type: String },
     aiVerdict: { type: String },
     aiWhyHigh: { type: String },
     aiWhyNotHigher: { type: String },

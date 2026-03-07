@@ -23,6 +23,12 @@ router.get('/pending', protect, authorize('admin'), activityController.getPendin
 // PATCH /api/activity/review/:id (Admin)
 router.patch('/review/:id', protect, authorize('admin'), activityController.reviewItem);
 
+// PATCH /api/activity/resubmit/:id
+router.patch('/resubmit/:id', protect, authorize('ngo'), upload.fields([
+    { name: 'documents', maxCount: 1 },
+    { name: 'photos', maxCount: 5 }
+]), activityController.resubmitItem);
+
 // GET /api/activity/needs/live
 router.get('/needs/live', activityController.getLiveNeeds);
 

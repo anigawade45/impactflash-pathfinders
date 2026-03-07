@@ -250,7 +250,7 @@ exports.getPendingReviews = async (req, res) => {
 exports.reviewItem = async (req, res) => {
     try {
         const { id } = req.params;
-        const { type, action } = req.body;
+        const { type, action, adminFeedback } = req.body;
 
         let Model;
         let status;
@@ -311,6 +311,7 @@ exports.reviewItem = async (req, res) => {
         // Final Approval/Rejection
         item.status = status;
         item.lastReviewedBy = req.userId;
+        if (adminFeedback) item.adminFeedback = adminFeedback;
         await item.save();
 
         // Update NGO lastReviewedBy and set Initial Impact Score on verification
@@ -375,6 +376,54 @@ exports.getMyActivities = async (req, res) => {
         const needs = await Need.find({ ngoId: req.userId }).sort({ createdAt: -1 });
         const campaigns = await Campaign.find({ ngoId: req.userId }).sort({ createdAt: -1 });
         res.status(200).json({ success: true, needs, campaigns });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+exports.resubmitItem = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { type } = req.body;
+        let Model = type === 'need' ? Need : Campaign;
+
+        const item = await Model.findById(id);
+        if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
+
+        if (item.ngoId.toString() !== req.userId.toString()) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+
+        if (item.status !== 'rejected') {
+            return res.status(400).json({ success: false, message: 'Only rejected items can be resubmitted.' });
+        }
+
+        // Update with new data
+        const updates = req.body;
+        delete updates.status; // Safety
+        delete updates.ngoId;
+
+        Object.assign(item, updates);
+
+        if (req.file) { // Single document
+            item.documents = [req.file.path];
+        } else if (req.files) { // Multiple
+            if (req.files.documents) item.documents = req.files.documents.map(f => f.path);
+            if (req.files.photos) item.photos = req.files.photos.map(f => f.path);
+        }
+
+        item.status = 'in_review';
+        item.adminFeedback = '';
+
+        // Recalculate AI score (Simulation)
+        item.aiScore = Math.floor(Math.random() * 20) + 70; // High score for resubmission simulation
+
+        await item.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Project resubmitted successfully. Back in review.',
+            data: item
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

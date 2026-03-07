@@ -201,3 +201,59 @@ exports.verifyAadhaar = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+exports.resubmitNgo = async (req, res) => {
+    try {
+        let { name, registrationNumber, isFcraRegistered, fcraNumber, panCard, address, website, workingAreas, bankAccount, representative } = req.body;
+        const ngo = await NGO.findById(req.userId);
+        if (!ngo) return res.status(404).json({ success: false, message: 'NGO not found' });
+
+        if (ngo.status !== 'rejected') {
+            return res.status(400).json({ success: false, message: 'Only rejected applications can be resubmitted.' });
+        }
+
+        // Logic similar to register but updates existing
+        if (typeof bankAccount === 'string') bankAccount = JSON.parse(bankAccount);
+        if (typeof representative === 'string') representative = JSON.parse(representative);
+        if (typeof workingAreas === 'string') workingAreas = JSON.parse(workingAreas);
+
+        if (name) ngo.name = name;
+        if (registrationNumber) ngo.registrationNumber = registrationNumber;
+        if (isFcraRegistered !== undefined) ngo.isFcraRegistered = isFcraRegistered === 'true' || isFcraRegistered === true;
+        if (fcraNumber) ngo.fcraNumber = fcraNumber;
+        if (panCard) ngo.panCard = panCard;
+        if (address) ngo.address = address;
+        if (website) ngo.website = website;
+        if (workingAreas) ngo.workingAreas = workingAreas;
+        if (bankAccount) ngo.bankAccount = bankAccount;
+        if (representative) ngo.representative = representative;
+
+        if (req.file?.path) {
+            ngo.registrationCertificate = req.file.path;
+        }
+
+        // Reset status to in_review
+        ngo.status = 'in_review';
+        ngo.adminFeedback = ''; // Clear old feedback
+
+        // Mock automated checks again (in real life, same as registration)
+        ngo.automatedChecks = {
+            fcraVerified: true,
+            panVerified: true,
+            aadhaarVerified: true,
+            pennyDropSuccessful: true,
+            visionAuthentic: true,
+            addressMatched: true
+        };
+        ngo.trustScore = 75; // Baseline after fix
+
+        await ngo.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Application resubmitted successfully. It is now back in review.',
+            data: ngo
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
