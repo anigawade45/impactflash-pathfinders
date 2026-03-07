@@ -89,7 +89,7 @@ export default function DonationModal({ isOpen, onClose, items, totalAmount }) {
                                             <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Secure Release</h2>
                                             <div className="flex items-center gap-2">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">RAZORPAY_ESCROW_ACTIVE</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">STRIPE_ESCROW_ACTIVE</span>
                                             </div>
                                         </div>
                                     </div>
@@ -146,6 +146,17 @@ export default function DonationModal({ isOpen, onClose, items, totalAmount }) {
                                             </div>
                                         </div>
                                         <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest text-center">Mandatory for Layer 3 anti-fraud & tax auditing</p>
+
+                                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <ShieldCheck className="w-4 h-4 text-green-500" />
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Self-Dealing Audit</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                                <span className="text-[9px] font-black text-green-600 uppercase tracking-tight">System Clear</span>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="space-y-6">

@@ -42,15 +42,28 @@ export default function NgoDashboard() {
         if (!proofUrl) return;
 
         let report = '';
+        let deliveredBeneficiaries = null;
+        let actualSpent = null;
+
         if (level === 3) {
             report = prompt('Enter final impact report text:');
             if (!report) return;
+            deliveredBeneficiaries = prompt('Delivered Beneficiaries Count:');
+            actualSpent = prompt('Actual Total Expenditure (₹):');
         }
 
         try {
-            const res = await escrowApi.submitProof({ itemId, level, itemType, proofUrl, report });
+            const res = await escrowApi.submitProof({
+                itemId,
+                level,
+                itemType,
+                proofUrl,
+                report,
+                deliveredBeneficiaries: deliveredBeneficiaries ? Number(deliveredBeneficiaries) : undefined,
+                actualSpent: actualSpent ? Number(actualSpent) : undefined
+            });
             if (res.success) {
-                alert('Proof submitted for admin verification.');
+                alert('Outcome details submitted. AI Analysis triggered.');
                 fetchMyProjects();
             }
         } catch (error) {

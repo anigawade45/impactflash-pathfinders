@@ -20,6 +20,12 @@ const needSchema = new mongoose.Schema({
     aiOneFlag: { type: String },
     aiSuggestion: { type: String },
     aiRecommendationPoints: [{ type: String }],
+    aiShapSummary: [
+        {
+            feature: { type: String },
+            impact: { type: String }
+        }
+    ],
     isSpotCheck: { type: Boolean, default: false }, // Layer 4: 5% random check
     lastReviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     approvals: [
@@ -34,6 +40,8 @@ const needSchema = new mongoose.Schema({
         default: 'pending'
     },
     fundsRaised: { type: Number, default: 0 },
+    fundsReleased: { type: Number, default: 0 },
+    escrowBalance: { type: Number, default: 0 },
     fundStatus: {
         type: String,
         enum: ['active', 'locked', 'frozen', 'refunded'],
@@ -49,7 +57,15 @@ const needSchema = new mongoose.Schema({
             proof: { type: String }, // URL to document/photo
             outcomeReport: { type: String }, // For milestone 3
             adminFeedback: { type: String },
-            releasedAt: { type: Date }
+            releasedAt: { type: Date },
+            releaseInstructionId: { type: String }, // Stripe-Escrow instruction reference
+            targetDate: { type: Date }, // Expected submission date for this level
+            aiOutcomeCheck: {
+                status: { type: String },
+                score: { type: Number },
+                analysis: { type: String },
+                fidelityMetrics: { type: Object }
+            }
         }
     ]
 }, { timestamps: true });

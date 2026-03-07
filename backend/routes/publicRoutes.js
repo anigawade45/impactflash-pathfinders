@@ -11,5 +11,6 @@ router.get('/stats', publicController.getPlatformStats);
 router.get('/needs/:id', publicController.getNeedById);
 router.get('/campaigns/:id', publicController.getCampaignById);
 router.get('/impact-stories', publicController.getPublicStories);
+router.get('/impact-stories/:id', publicController.getPublicStoryById);
 
 module.exports = router;

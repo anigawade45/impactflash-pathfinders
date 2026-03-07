@@ -3,14 +3,7 @@ const Need = require('../models/Need');
 const Campaign = require('../models/Campaign');
 const Donor = require('../models/Donor');
 const NGO = require('../models/NGO');
-const Razorpay = require('razorpay');
-const crypto = require('crypto');
 const axios = require('axios');
-
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock_id',
-    key_secret: process.env.RAZORPAY_KEY_SECRET || 'mock_secret'
-});
 
 exports.suggestSplit = async (req, res) => {
     try {
@@ -208,6 +201,28 @@ exports.verifyPayment = async (req, res) => {
 const updateEscrowAndFunds = async (donation) => {
     const Need = require('../models/Need');
     const Campaign = require('../models/Campaign');
+    const Donor = require('../models/Donor');
+
+    // 1. Update Donor Streak
+    const donor = await Donor.findById(donation.donorId);
+    if (donor) {
+        const now = new Date();
+        const lastDonation = donor.lastDonationDate;
+
+        if (!lastDonation) {
+            donor.streak = 1;
+        } else {
+            const diffMonths = (now.getFullYear() - lastDonation.getFullYear()) * 12 + (now.getMonth() - lastDonation.getMonth());
+            if (diffMonths === 1) {
+                donor.streak += 1;
+            } else if (diffMonths > 1) {
+                donor.streak = 1; // Reset if gap > 1 month
+            }
+            // else diffMonths === 0 (already donated this month, streak stays)
+        }
+        donor.lastDonationDate = now;
+        await donor.save();
+    }
 
     for (const item of donation.items) {
         const Model = item.targetType === 'Need' ? Need : Campaign;
@@ -215,35 +230,18 @@ const updateEscrowAndFunds = async (donation) => {
         if (!project) continue;
 
         project.fundsRaised += item.amount;
+        if (item.targetType === 'Need') {
+            project.escrowBalance += item.amount;
+        }
 
         const targetAmount = project.amount || project.targetAmount;
-        const progress = (project.fundsRaised / targetAmount) * 100;
+        const currentProgress = (project.fundsRaised / targetAmount) * 100;
 
-        // Tranche 1: 40% Release at 40% reach
-        if (progress >= 40 && !project.milestones.find(m => m.level === 1 && m.status === 'verified')) {
-            let m1 = project.milestones.find(m => m.level === 1);
-            if (!m1) {
-                project.milestones.push({ level: 1, title: 'Initial Impact Funds (40%)', percentage: 40, status: 'verified', releasedAt: new Date() });
-            } else {
-                m1.status = 'verified';
-                m1.releasedAt = new Date();
-            }
-        }
-
-        // Tranche 2: 40% Release at 80% reach
-        if (progress >= 80 && !project.milestones.find(m => m.level === 2 && m.status === 'verified')) {
-            let m2 = project.milestones.find(m => m.level === 2);
-            if (!m2) {
-                project.milestones.push({ level: 2, title: 'Operational Funds (40%)', percentage: 40, status: 'verified', releasedAt: new Date() });
-            } else {
-                m2.status = 'verified';
-                m2.releasedAt = new Date();
-            }
-        }
-
-        // Final Completion Check
-        if (progress >= 100 && project.status !== 'completed') {
-            project.status = 'completed';
+        // Final Completion Check (Funding Reach)
+        if (currentProgress >= 100 && project.status !== 'completed') {
+            // We keep it as 'live' if milestones are pending, just mark it as funded
+            // For now, let's just update the status if fully funded
+            console.log(`Project ${project.title} fully funded.`);
         }
 
         await project.save();
@@ -278,9 +276,10 @@ exports.handleStripeWebhook = async (req, res) => {
 
 exports.getReceipt = async (req, res) => {
     try {
+        const PDFDocument = require('pdfkit');
         const donation = await Donation.findById(req.params.id)
-            .populate('donorId', 'name email address')
-            .populate('items.ngoId', 'name address fcraNumber');
+            .populate('donorId', 'name email address panCard')
+            .populate('items.ngoId', 'name address fcraNumber panCard');
 
         if (!donation) {
             return res.status(404).json({ success: false, message: 'Donation record not found' });
@@ -295,19 +294,58 @@ exports.getReceipt = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Payment not completed yet' });
         }
 
-        // Return structured data for receipt generation
-        res.status(200).json({
-            success: true,
-            data: {
-                receiptNumber: `80G-${donation._id.toString().substring(0, 8).toUpperCase()}`,
-                donor: donation.donorId,
-                items: donation.items,
-                totalAmount: donation.totalAmount,
-                date: donation.updatedAt,
-                certificateType: '80G Tax Benefit'
-            }
+        const doc = new PDFDocument({ margin: 50 });
+        const filename = `Impact_Receipt_${donation._id.toString().substring(0, 8)}.pdf`;
+
+        res.setHeader('Content-disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-type', 'application/pdf');
+
+        // Design the PDF
+        doc.fillColor('#F97316').fontSize(24).text('IMPACTFLASH', { align: 'center' });
+        doc.fillColor('#64748B').fontSize(10).text('Building a Transparent Philanthropy Loop', { align: 'center' }).moveDown(2);
+
+        doc.strokeColor('#E2E8F0').lineWidth(1).moveTo(50, 100).lineTo(550, 100).stroke();
+
+        doc.moveDown(2);
+        doc.fillColor('#0F172A').fontSize(18).text('IMPACT RECEIPT', { align: 'center' }).moveDown(1.5);
+
+        const receiptNo = `REC-${donation._id.toString().substring(0, 8).toUpperCase()}`;
+        doc.fontSize(10).fillColor('#475569');
+        doc.text(`Receipt No: ${receiptNo}`, { align: 'left' });
+        doc.text(`Date: ${new Date(donation.updatedAt).toLocaleDateString()}`, { align: 'right' });
+        doc.moveDown(2);
+
+        // Donor Section
+        doc.fillColor('#F97316').fontSize(12).text('DONOR DETAILS', { underline: true }).moveDown(0.5);
+        doc.fillColor('#0F172A').fontSize(10);
+        doc.text(`Name: ${donation.donorId.name}`);
+        doc.text(`Email: ${donation.donorId.email}`);
+        doc.text(`PAN: ${donation.donorId.panCard || 'N/A'}`);
+        doc.moveDown(2);
+
+        // Donation Table
+        doc.fillColor('#F97316').fontSize(12).text('CONTRIBUTION DETAILS', { underline: true }).moveDown(0.5);
+        doc.fillColor('#0F172A').fontSize(10);
+
+        donation.items.forEach((item, index) => {
+            doc.text(`${index + 1}. ${item.title} (to ${item.ngoId.name}) - INR ${item.amount.toLocaleString()}`);
+            doc.fontSize(8).fillColor('#64748B').text(`   NGO PAN: ${item.ngoId.panCard || 'N/A'} | FCRA: ${item.ngoId.fcraNumber || 'N/A'}`).moveDown(0.5);
+            doc.fontSize(10).fillColor('#0F172A');
         });
+
+        doc.moveDown(1);
+        doc.strokeColor('#E2E8F0').lineWidth(0.5).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+        doc.moveDown(1);
+        doc.fontSize(14).font('Helvetica-Bold').text(`TOTAL AMOUNT: INR ${donation.totalAmount.toLocaleString()}`, { align: 'right' });
+
+        doc.moveDown(4);
+        doc.fontSize(8).fillColor('#94A3B8').text('This is an electronically generated acknowledgment of your contribution. No signature is required. Digital Verification code: ' + donation._id, { align: 'center' });
+
+        doc.pipe(res);
+        doc.end();
+
     } catch (error) {
+        console.error('PDF Gen Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -316,7 +354,20 @@ exports.getMyDonations = async (req, res) => {
     try {
         const donations = await Donation.find({ donorId: req.userId })
             .populate('items.ngoId', 'name')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // Manual population for target details to include escrow/milestone status
+        for (const donation of donations) {
+            for (const item of donation.items) {
+                const Model = item.targetType === 'Need' ? Need : Campaign;
+                const project = await Model.findById(item.targetId)
+                    .select('title amount fundsRaised fundsReleased escrowBalance milestones fundStatus status')
+                    .lean();
+                item.targetDetails = project;
+            }
+        }
+
         res.status(200).json({ success: true, data: donations });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

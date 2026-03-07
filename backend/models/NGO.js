@@ -47,6 +47,7 @@ const ngoSchema = new mongoose.Schema({
     automatedChecks: {
         fcraVerified: { type: Boolean, default: false },
         panVerified: { type: Boolean, default: false },
+        aadhaarVerified: { type: Boolean, default: false },
         pennyDropSuccessful: { type: Boolean, default: false },
         visionAuthentic: { type: Boolean, default: false },
         addressMatched: { type: Boolean, default: false }

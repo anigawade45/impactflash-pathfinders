@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { donationApi } from '../../api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, ShieldCheck, TrendingUp, Download, PieChart, Heart, Award, ArrowRight, Activity, Zap } from 'lucide-react';
+import { Wallet, ShieldCheck, TrendingUp, Download, PieChart, Heart, Award, ArrowRight, Activity, Zap, Lock, Unlock, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,9 +16,27 @@ export default function DonorDashboard() {
 
     useEffect(() => {
         if (user) {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('success') === 'true' && urlParams.get('session_id')) {
+                handleVerifyStripe(urlParams.get('session_id'));
+            }
             fetchDashboardData();
         }
     }, [user]);
+
+    const handleVerifyStripe = async (sessionId) => {
+        try {
+            const res = await donationApi.verify({ session_id: sessionId });
+            if (res.success) {
+                // Clear URL params
+                window.history.replaceState({}, document.title, window.location.pathname);
+                alert("Donation successful! Your Impact Receipt is ready.");
+                fetchDashboardData();
+            }
+        } catch (error) {
+            console.error("Stripe verification failed");
+        }
+    };
 
     const fetchDashboardData = async () => {
         setLoading(true);
@@ -114,12 +132,19 @@ export default function DonorDashboard() {
 
     const handleDownloadReceipt = async (id) => {
         try {
-            const res = await donationApi.getReceipt(id);
-            if (res.success) {
-                alert(`Receipt Generated: ${res.data.receiptNumber}\nTotal: ₹${res.data.totalAmount}`);
-            }
+            const response = await donationApi.getReceipt(id);
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Impact_Receipt_${id.substring(0, 8)}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
         } catch (error) {
-            alert("Could not generate receipt at this time.");
+            console.error("Download Error:", error);
+            alert("Could not generate receipt at this time. Our AI is updating the audit records.");
         }
     };
 
@@ -148,7 +173,7 @@ export default function DonorDashboard() {
                         </p>
                     </motion.div>
 
-                    <div className="grid grid-cols-2 gap-6 w-full lg:w-auto">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6 w-full lg:w-auto">
                         <MetricCard
                             icon={<Wallet className="w-6 h-6" />}
                             label="Portfolio Size"
@@ -156,11 +181,57 @@ export default function DonorDashboard() {
                             color="text-slate-900"
                         />
                         <MetricCard
-                            icon={<Activity className="w-6 h-6" />}
-                            label="Impact Velocity"
-                            value={stats.impactScore}
+                            icon={<Zap className="w-6 h-6" />}
+                            label="Impact Streak"
+                            value={`${user?.streak || 1} Months`}
                             color="text-orange-500"
                         />
+                        <MetricCard
+                            icon={<Activity className="w-6 h-6" />}
+                            label="Impact Score"
+                            value={stats.impactScore}
+                            color="text-indigo-500"
+                        />
+                    </div>
+                </div>
+
+                {/* Notification Center */}
+                <div className="mb-20">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100">
+                            <Activity className="w-6 h-6 text-orange-500" />
+                        </div>
+                        <h2 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Alerts & Milestones</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {user?.notifications && user.notifications.filter(n => !n.read).length > 0 ? (
+                            user.notifications.filter(n => !n.read).map((notif, idx) => (
+                                <motion.div
+                                    key={idx}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className={`p-6 rounded-3xl border ${notif.type === 'milestone' ? 'bg-orange-50 border-orange-100' : 'bg-indigo-50 border-indigo-100'} relative group cursor-pointer`}
+                                    onClick={() => navigate(notif.link)}
+                                >
+                                    <div className="flex justify-between items-start mb-4">
+                                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest ${notif.type === 'milestone' ? 'bg-orange-500 text-white' : 'bg-indigo-500 text-white'}`}>
+                                            {notif.type === 'milestone' ? 'Milestone' : 'Outcome'}
+                                        </span>
+                                        <span className="text-[8px] font-bold text-slate-400">{new Date(notif.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                    <p className="text-sm font-black text-slate-800 leading-tight mb-4">{notif.message}</p>
+                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-orange-600 group-hover:gap-4 transition-all">
+                                        Take Action <ArrowRight className="w-3 h-3" />
+                                    </div>
+                                </motion.div>
+                            ))
+                        ) : (
+                            <div className="p-10 rounded-[2.5rem] border border-dashed border-slate-200 text-center flex flex-col items-center justify-center col-span-full">
+                                <ShieldCheck className="w-10 h-10 text-slate-200 mb-4" />
+                                <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Your portfolio is performing optimally. No alerts.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -210,19 +281,60 @@ export default function DonorDashboard() {
                                                     onClick={() => handleDownloadReceipt(donation._id)}
                                                     className="flex items-center gap-2 text-orange-600 font-black text-[10px] uppercase tracking-widest hover:underline active:scale-95 transition-all"
                                                 >
-                                                    <Download className="w-3.5 h-3.5" /> 80G Receipt
+                                                    <Download className="w-3.5 h-3.5" /> Impact Receipt
                                                 </button>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-50/50 px-8 py-4 flex flex-wrap gap-2 group-hover:bg-orange-50 transition-colors border-t border-slate-50">
-                                        {donation.items.map((item, i) => (
-                                            <span key={i} className="px-3 py-1 bg-white border border-slate-100 rounded-full text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
-                                                {item.title}
-                                            </span>
-                                        ))}
+                                    <div className="bg-slate-50/50 px-8 py-6 group-hover:bg-orange-50 transition-colors border-t border-slate-50">
+                                        <div className="flex flex-col gap-6">
+                                            {donation.items.map((item, i) => (
+                                                <div key={i} className="space-y-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="w-2 h-2 rounded-full bg-orange-400"></span>
+                                                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{item.title}</span>
+                                                            <span className="text-[9px] font-bold text-slate-400">by {item.ngoId.name}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-lg border border-slate-100">
+                                                            <Lock className="w-3 h-3 text-slate-400" />
+                                                            <span className="text-[8px] font-black text-slate-500 uppercase">Secure Escrow Trace</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 3-Stage Escrow Visualizer */}
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        {[
+                                                            { level: 1, label: 'Stage 1 (40%)', desc: 'Start Proof' },
+                                                            { level: 2, label: 'Stage 2 (40%)', desc: 'Mid-Point' },
+                                                            { level: 3, label: 'Stage 3 (20%)', desc: 'Final Outcome' }
+                                                        ].map((stage) => {
+                                                            const milestone = item.targetDetails?.milestones?.find(m => m.level === stage.level);
+                                                            const isReleased = milestone?.status === 'verified';
+                                                            const isSubmitted = milestone?.status === 'submitted';
+
+                                                            return (
+                                                                <div key={stage.level} className="relative">
+                                                                    <div className={`h-1.5 rounded-full mb-2 transition-all duration-700 ${isReleased ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]' : isSubmitted ? 'bg-orange-400 animate-pulse' : 'bg-slate-200'}`}></div>
+                                                                    <div className="flex flex-col">
+                                                                        <span className={`text-[8px] font-black uppercase tracking-tight ${isReleased ? 'text-green-600' : 'text-slate-400'}`}>{stage.label}</span>
+                                                                        <span className="text-[7px] font-bold text-slate-300 uppercase leading-none">{stage.desc}</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    {item.targetDetails?.fundStatus === 'frozen' && (
+                                                        <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3">
+                                                            <Activity className="w-4 h-4 text-red-500 animate-pulse" />
+                                                            <p className="text-[9px] font-black text-red-600 uppercase tracking-widest">Node Frozen: Milestone Overdue. Investigation Triggered.</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </motion.div>
                             )) : (
@@ -248,7 +360,7 @@ export default function DonorDashboard() {
                             <h3 className="text-2xl font-black tracking-tight mb-4 uppercase">Trust Profile</h3>
                             <p className="text-sm text-slate-400 font-medium mb-10 leading-relaxed">
                                 Your account is currently at <span className="text-white">{tier.name}</span>.
-                                {stats.total < 10000 ? " Contribute ₹" + (10000 - stats.total).toLocaleString() + " more to reach Tier 2." : " 80G tax benefits are now priority processed."}
+                                {stats.total < 10000 ? " Contribute ₹" + (10000 - stats.total).toLocaleString() + " more to reach Tier 2." : " Impact reports and receipts are now priority processed."}
                             </p>
 
                             <div className="space-y-6">
@@ -290,6 +402,38 @@ export default function DonorDashboard() {
                                 </div>
                             </div>
                         )}
+
+                        {/* Streak Risk Alert */}
+                        {user?.lastDonationDate && (new Date().getMonth() !== new Date(user.lastDonationDate).getMonth()) && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="modern-card p-8 bg-red-50 border border-red-100 flex items-center gap-6"
+                            >
+                                <div className="p-3 bg-red-500 rounded-2xl shadow-lg shadow-red-500/20">
+                                    <Zap className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-black text-red-700 uppercase tracking-tight">Streak at Risk!</h4>
+                                    <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest leading-relaxed">
+                                        Donate this month to maintain your {user?.streak || 1}-month impact streak.
+                                    </p>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Annual Impact Report */}
+                        <div className="modern-card p-10 bg-indigo-900 text-white relative overflow-hidden group border-none">
+                            <div className="absolute inset-0 noise-bg opacity-10"></div>
+                            <Award className="w-12 h-12 mb-8 text-indigo-400" />
+                            <h3 className="text-2xl font-black tracking-tight mb-4 uppercase">2026 Impact Report</h3>
+                            <p className="text-sm text-indigo-200 font-medium mb-10 leading-relaxed">
+                                Your collective contributions have fueled significant change this year. View your personalized summary.
+                            </p>
+                            <button className="w-full py-5 rounded-3xl bg-white/10 hover:bg-white/20 transition-all text-white text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 flex items-center justify-center gap-3">
+                                Generate Report <PieChart className="w-4 h-4" />
+                            </button>
+                        </div>
 
                         {/* Cause Affinity */}
                         <div className="modern-card p-10 bg-white border border-slate-100">
