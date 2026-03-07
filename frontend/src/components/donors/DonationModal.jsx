@@ -50,161 +50,152 @@ export default function DonationModal({ isOpen, onClose, items, totalAmount }) {
                     ></motion.div>
 
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.98, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="w-full max-w-xl bg-white rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] overflow-hidden relative z-10 border border-white/20"
+                        exit={{ opacity: 0, scale: 0.98, y: 10 }}
+                        className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.2)] overflow-hidden relative z-10 border border-slate-100"
                     >
                         {success ? (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="p-16 text-center"
+                                className="p-12 text-center"
                             >
                                 <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    transition={{ type: 'spring', damping: 12, stiffness: 200 }}
-                                    className="w-32 h-32 bg-orange-500 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-3xl shadow-orange-500/40"
+                                    transition={{ type: 'spring', damping: 15, stiffness: 200 }}
+                                    className="w-20 h-20 bg-orange-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-orange-500/40"
                                 >
-                                    <CheckCircle2 className="w-16 h-16 text-white" />
+                                    <CheckCircle2 className="w-10 h-10 text-white" />
                                 </motion.div>
-                                <h2 className="text-5xl font-black text-slate-900 mb-6 tracking-tighter">Impact Authorized</h2>
-                                <p className="text-xl text-slate-500 mb-12 leading-relaxed font-medium">Your contribution has been successfully released to the Escrow cluster. 80G receipt is available in your dashboard.</p>
+                                <h2 className="text-3xl font-black text-slate-900 mb-3 tracking-tighter">Impact Authorized</h2>
+                                <p className="text-sm text-slate-500 mb-10 leading-relaxed font-medium px-4">Your contribution has been released to the Escrow cluster. 80G receipt is available in your dashboard.</p>
                                 <button
                                     onClick={onClose}
-                                    className="w-full btn-primary py-6 rounded-3xl text-2xl shadow-3xl shadow-orange-500/20 active:scale-95 transition-all"
+                                    className="w-full bg-slate-900 py-4 rounded-2xl text-lg font-black text-white hover:bg-black transition-all active:scale-95"
                                 >
                                     Continue Discovery
                                 </button>
                             </motion.div>
                         ) : (
                             <>
-                                <div className="p-10 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-slate-900 rounded-2xl shadow-xl">
-                                            <Lock className="w-6 h-6 text-white" />
+                                <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/20 backdrop-blur-sm">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-slate-900 rounded-xl">
+                                            <Lock className="w-5 h-5 text-white" />
                                         </div>
                                         <div>
-                                            <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Secure Release</h2>
-                                            <div className="flex items-center gap-2">
+                                            <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Secure Release</h2>
+                                            <div className="flex items-center gap-1.5">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">STRIPE_ESCROW_ACTIVE</span>
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">ACTIVE_ESCROW_NODE</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <button onClick={onClose} className="p-3 hover:bg-slate-100 rounded-2xl transition-all active:scale-90">
-                                        <X className="w-6 h-6 text-slate-400" />
+                                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-all">
+                                        <X className="w-5 h-5 text-slate-400" />
                                     </button>
                                 </div>
 
-                                <div className="p-10 space-y-10">
-                                    <div className="space-y-6">
-                                        <div className="flex items-center justify-between px-2">
-                                            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Allocation Queue</h3>
-                                            <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Live Valuation</span>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {items.map((item, idx) => (
-                                                <div key={idx} className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-orange-500/20 transition-all">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-2 h-2 rounded-full bg-orange-500/50"></div>
-                                                        <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{item.title}</span>
-                                                    </div>
-                                                    <span className="text-xl font-black text-slate-900">₹{item.amount.toLocaleString()}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex justify-between items-center px-6 py-8 bg-slate-900 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
-                                            <div className="absolute inset-0 noise-bg opacity-10"></div>
-                                            <div className="relative z-10 flex items-center gap-4">
-                                                <div className="p-3 bg-white/10 rounded-xl backdrop-blur-md">
-                                                    <CreditCard className="w-6 h-6 text-white" />
-                                                </div>
-                                                <span className="text-white/60 font-black text-[11px] uppercase tracking-widest">Total Authorized Release</span>
-                                            </div>
-                                            <span className="relative z-10 text-4xl font-black text-white tracking-tighter">₹{totalAmount.toLocaleString()}</span>
-                                        </div>
-                                    </div>
-
+                                <div className="p-8 space-y-6">
+                                    {/* Summary Section */}
                                     <div className="space-y-4">
-                                        <div className="flex items-center gap-2 px-2">
-                                            <Fingerprint className="w-4 h-4 text-orange-500" />
-                                            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Identity & Compliance</h3>
+                                        <div className="flex items-center justify-between px-1">
+                                            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Live Allocation Queue</h3>
+                                            <span className="text-[8px] font-black text-orange-500 uppercase px-2 py-0.5 bg-orange-50 rounded-md border border-orange-100">Verified Marketplace</span>
                                         </div>
-                                        <div className="relative">
-                                            <input
-                                                required
-                                                type="text"
-                                                placeholder="Enter PAN Number (ABCDE1234F)"
-                                                value={panCard}
-                                                onChange={(e) => setPanCard(e.target.value.toUpperCase())}
-                                                className="w-full px-8 py-6 bg-slate-50 border border-slate-100 rounded-3xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 text-2xl font-black placeholder-slate-200 uppercase tracking-widest transition-all"
-                                            />
-                                            <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-orange-500 uppercase tracking-widest bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100">
-                                                SECURE_INPUT
-                                            </div>
-                                        </div>
-                                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest text-center">Mandatory for Layer 3 anti-fraud & tax auditing</p>
 
-                                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <ShieldCheck className="w-4 h-4 text-green-500" />
-                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Self-Dealing Audit</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                                <span className="text-[9px] font-black text-green-600 uppercase tracking-tight">System Clear</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-6">
-                                        <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] px-2 text-center">Visibility Protocol</h3>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            {['anonymous', 'public', 'ngo_only'].map(opt => (
-                                                <button
-                                                    key={opt}
-                                                    onClick={() => setVisibility(opt)}
-                                                    className={`py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border-2 transition-all active:scale-95 ${visibility === opt
-                                                        ? 'border-slate-900 bg-slate-900 text-white shadow-2xl scale-[1.02]'
-                                                        : 'border-slate-50 bg-slate-50/50 text-slate-400 hover:border-slate-200'
-                                                        }`}
-                                                >
-                                                    {opt.replace('_', ' ')}
-                                                </button>
+                                        <div className="max-h-[160px] overflow-y-auto pr-2 custom-scrollbar space-y-2">
+                                            {items.map((item, idx) => (
+                                                <div key={idx} className="flex justify-between items-center p-4 bg-slate-50/80 rounded-2xl border border-slate-100/50 group transition-all">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500/40"></div>
+                                                        <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight line-clamp-1">{item.title}</span>
+                                                    </div>
+                                                    <span className="text-sm font-black text-slate-900">₹{item.amount.toLocaleString()}</span>
+                                                </div>
                                             ))}
                                         </div>
+
+                                        <div className="flex justify-between items-center px-6 py-5 bg-slate-900 rounded-3xl shadow-xl relative overflow-hidden">
+                                            <div className="relative z-10 flex items-center gap-3">
+                                                <CreditCard className="w-5 h-5 text-white/60" />
+                                                <span className="text-white/40 font-black text-[9px] uppercase tracking-widest">Total Release</span>
+                                            </div>
+                                            <span className="relative z-10 text-3xl font-black text-white tracking-tighter">₹{totalAmount.toLocaleString()}</span>
+                                        </div>
                                     </div>
 
-                                    {error && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="p-6 bg-rose-50 border border-rose-100 text-rose-600 rounded-3xl text-sm font-black flex items-center gap-4 shadow-xl shadow-rose-500/5"
-                                        >
-                                            <AlertCircle className="w-6 h-6 flex-shrink-0" />
-                                            {error}
-                                        </motion.div>
-                                    )}
+                                    {/* Form Section */}
+                                    <div className="space-y-6 pt-2">
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2 px-1">
+                                                <Fingerprint className="w-3.5 h-3.5 text-orange-500" />
+                                                <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Identity & Compliance</h3>
+                                            </div>
+                                            <div className="relative">
+                                                <input
+                                                    required
+                                                    type="text"
+                                                    placeholder="ENTER PAN (ABCDE1234F)"
+                                                    value={panCard}
+                                                    onChange={(e) => setPanCard(e.target.value.toUpperCase())}
+                                                    className="w-full px-6 py-4 bg-white border-2 border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500/30 text-xl font-black placeholder-slate-200 uppercase tracking-widest transition-all shadow-sm"
+                                                />
+                                            </div>
+                                        </div>
 
-                                    <button
-                                        onClick={handleConfirm}
-                                        disabled={loading}
-                                        className="w-full btn-primary py-7 rounded-[2rem] text-2xl shadow-3xl shadow-orange-500/30 disabled:opacity-50 flex items-center justify-center gap-4 group active:scale-[0.98] transition-all overflow-hidden relative"
-                                    >
-                                        {loading ? (
-                                            <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                        ) : (
-                                            <>
-                                                <span className="relative z-10">Authorize & Pay</span>
-                                                <ChevronRight className="w-6 h-6 relative z-10 group-hover:translate-x-2 transition-transform duration-500" />
-                                            </>
+                                        <div className="space-y-3">
+                                            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Visibility Access</h3>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {['anonymous', 'public', 'ngo_only'].map(opt => (
+                                                    <button
+                                                        key={opt}
+                                                        onClick={() => setVisibility(opt)}
+                                                        className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 transition-all active:scale-95 ${visibility === opt
+                                                            ? 'border-slate-900 bg-slate-900 text-white shadow-lg'
+                                                            : 'border-slate-50 bg-slate-50/50 text-slate-400 hover:border-slate-200'
+                                                            }`}
+                                                    >
+                                                        {opt.replace('_', ' ')}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {error && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -5 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-[10px] font-black uppercase flex items-center gap-3"
+                                            >
+                                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                                {error}
+                                            </motion.div>
                                         )}
-                                    </button>
-                                    <div className="flex items-center justify-center gap-2 text-slate-300">
-                                        <Activity className="w-3 h-3" />
-                                        <span className="text-[8px] font-black uppercase tracking-[0.5em]">Network Intelligence Encrypted</span>
+
+                                        <div className="space-y-4 pt-2">
+                                            <button
+                                                onClick={handleConfirm}
+                                                disabled={loading}
+                                                className="w-full bg-orange-500 hover:bg-orange-600 py-5 rounded-2xl text-lg font-black text-white shadow-xl shadow-orange-500/20 disabled:opacity-50 flex items-center justify-center gap-3 group active:scale-[0.98] transition-all"
+                                            >
+                                                {loading ? (
+                                                    <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                ) : (
+                                                    <>
+                                                        <span>Authorize Release</span>
+                                                        <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                                    </>
+                                                )}
+                                            </button>
+
+                                            <div className="flex items-center justify-center gap-1.5 text-slate-300">
+                                                <ShieldCheck className="w-3 h-3 text-slate-400" />
+                                                <span className="text-[8px] font-black uppercase tracking-[0.3em]">Network Intelligence Encrypted</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </>

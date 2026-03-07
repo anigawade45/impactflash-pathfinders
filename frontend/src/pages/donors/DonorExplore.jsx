@@ -17,23 +17,43 @@ export default function DonorExplore() {
     const [smartAmount, setSmartAmount] = useState(1000);
     const navigate = useNavigate();
 
+    const [customAmounts, setCustomAmounts] = useState({});
+    const [exploreError, setExploreError] = useState('');
+
     const handleSmartDonate = () => {
-        if (smartAmount < 100) return alert("Minimum donation is ₹100");
+        if (smartAmount < 100) {
+            setExploreError("Minimum donation is ₹100");
+            setTimeout(() => setExploreError(''), 3000);
+            return;
+        }
+        setExploreError('');
         setCheckoutItems(suggestedSplit);
         setTotalAmount(smartAmount);
         setShowModal(true);
     };
 
     const handleSingleDonate = (item) => {
+        const amount = customAmounts[item._id] || 5000;
+        if (amount < 100) {
+            setExploreError("Minimum donation is ₹100 for any node.");
+            setTimeout(() => setExploreError(''), 3000);
+            return;
+        }
+        setExploreError('');
         setCheckoutItems([{
             targetId: item._id,
             targetType: activeTab === 'needs' ? 'Need' : 'Campaign',
-            amount: 5000,
+            amount: amount,
             title: item.title,
-            ngoId: item.ngoId._id || item.ngoId
+            ngoId: item.ngoId._id || item.ngoId,
+            category: item.category
         }]);
-        setTotalAmount(5000);
+        setTotalAmount(amount);
         setShowModal(true);
+    };
+
+    const handleAmountChange = (id, val) => {
+        setCustomAmounts(prev => ({ ...prev, [id]: Number(val) }));
     };
 
     useEffect(() => {
@@ -59,7 +79,12 @@ export default function DonorExplore() {
     };
 
     const fetchSmartSuggestion = async () => {
-        if (smartAmount < 100) return alert("Minimum donation is ₹100");
+        if (smartAmount < 100) {
+            setExploreError("Minimum donation is ₹100");
+            setTimeout(() => setExploreError(''), 3000);
+            return;
+        }
+        setExploreError('');
         setLoading(true);
         try {
             const res = await donationApi.getSuggestion(smartAmount);
@@ -75,7 +100,20 @@ export default function DonorExplore() {
     };
 
     return (
-        <div className="min-h-screen pt-24 pb-32 px-4 bg-slate-50 overflow-hidden">
+        <div className="min-h-screen pt-24 pb-32 px-4 bg-slate-50 overflow-hidden relative">
+            <AnimatePresence>
+                {exploreError && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: -20, x: '-50%' }}
+                        className="fixed top-28 left-1/2 z-[100] px-8 py-4 bg-red-600 text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-[0_20px_40px_-10px_rgba(220,38,38,0.4)] flex items-center gap-3 border border-red-500"
+                    >
+                        <ShieldCheck className="w-5 h-5 text-red-200" />
+                        {exploreError}
+                    </motion.div>
+                )}
+            </AnimatePresence>
             {/* Header Content */}
             <div className="max-w-7xl mx-auto mb-20">
                 <div className="flex flex-col lg:flex-row justify-between items-end gap-12">
@@ -274,51 +312,64 @@ export default function DonorExplore() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: idx * 0.05 }}
-                                    className="modern-card group bg-white border border-slate-200 hover:border-orange-200 overflow-hidden"
+                                    className="modern-card group bg-white border border-slate-200 hover:border-orange-200 overflow-hidden flex flex-col"
                                 >
-                                    <div className="h-64 bg-slate-100 relative overflow-hidden">
+                                    <div
+                                        onClick={() => navigate(`/project/${activeTab === 'needs' ? 'need' : 'campaign'}/${item._id}`)}
+                                        className="h-56 bg-slate-100 relative overflow-hidden shrink-0 cursor-pointer"
+                                    >
                                         {item.photos?.[0] ? (
-                                            <img src={item.photos[0]} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                            <img src={item.photos[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-6xl opacity-20">🎨</div>
+                                            <div className="w-full h-full flex items-center justify-center text-5xl opacity-10 bg-slate-200">📊</div>
                                         )}
-                                        <div className="absolute top-6 left-6 p-4 glass-morphism rounded-3xl border border-white/40 shadow-2xl flex flex-col items-center min-w-[80px]">
-                                            <p className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter mb-1">TRUST SCORE</p>
-                                            <p className="text-3xl font-black text-slate-900 leading-none">{item.ngoId?.trustScore || 0}</p>
+
+                                        {/* Status & Scores Overlays */}
+                                        <div className="absolute top-4 left-4 flex gap-2">
+                                            <div className="px-3 py-1.5 glass-morphism rounded-xl flex items-center gap-2 border border-white/30 shadow-sm">
+                                                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                                                <span className="text-[10px] font-black text-slate-900 tracking-tight">TRUST {item.ngoId?.trustScore || 0}</span>
+                                            </div>
+                                            <div className="px-3 py-1.5 glass-morphism rounded-xl flex items-center gap-2 border border-white/30 shadow-sm">
+                                                <Sparkles className="w-3.5 h-3.5 text-orange-600" />
+                                                <span className="text-[10px] font-black text-slate-900 tracking-tight">AI {item.aiScore}</span>
+                                            </div>
                                         </div>
 
-                                        <div className="absolute top-6 right-6 p-4 glass-morphism rounded-3xl border border-white/40 shadow-2xl flex flex-col items-center min-w-[80px]">
-                                            <p className="text-[8px] font-black text-orange-600 uppercase tracking-tighter mb-1">PROJECT AI</p>
-                                            <p className="text-3xl font-black text-slate-900 leading-none">{item.aiScore}</p>
-                                        </div>
-                                        <div className="absolute bottom-6 left-6">
-                                            <div className="px-4 py-1.5 glass-morphism rounded-full border border-white/40 shadow-xl flex items-center gap-2">
-                                                <Timer className="w-3.5 h-3.5 text-orange-500" />
-                                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">LIVE STATUS</span>
+                                        <div className="absolute bottom-4 right-4">
+                                            <div className="px-3 py-1 bg-slate-900/80 backdrop-blur-md rounded-lg border border-white/10 shadow-xl flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                                <span className="text-[9px] font-black text-white uppercase tracking-[0.2em]">LIVE</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="p-8">
+                                    <div className="p-8 flex-1 flex flex-col">
                                         <div className="flex justify-between items-start mb-4">
-                                            <span className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em]">{item.category || 'Humanitarian'}</span>
+                                            <span className="text-[10px] font-black text-orange-500 uppercase tracking-[0.3em]">{item.category || 'Humanitarian'}</span>
                                             {item.urgency === 'high' && (
-                                                <span className="px-3 py-1 bg-red-50 text-red-600 text-[10px] font-black uppercase rounded-lg border border-red-100">Urgent</span>
+                                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-red-50 text-red-600 text-[9px] font-black uppercase rounded-md border border-red-100">
+                                                    <Timer className="w-3 h-3" /> Urgent
+                                                </span>
                                             )}
                                         </div>
-                                        <h3 className="text-2xl font-black text-slate-800 mb-4 tracking-tight group-hover:text-orange-600 transition-colors line-clamp-1">{item.title}</h3>
-                                        <p className="text-slate-500 text-sm font-medium leading-relaxed line-clamp-2 mb-8">{item.description || item.story}</p>
 
-                                        <div className="flex items-center justify-between p-6 bg-slate-50 rounded-4xl border border-slate-100 group-hover:bg-orange-50 group-hover:border-orange-100 transition-all">
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Required</p>
-                                                <p className="text-2xl font-black text-slate-900 tracking-tighter">₹{(item.amount || item.targetAmount).toLocaleString()}</p>
-                                            </div>
+                                        <h3
+                                            onClick={() => navigate(`/project/${activeTab === 'needs' ? 'need' : 'campaign'}/${item._id}`)}
+                                            className="text-xl font-black text-slate-900 mb-3 tracking-tight group-hover:text-orange-600 transition-colors line-clamp-1 cursor-pointer"
+                                        >
+                                            {item.title}
+                                        </h3>
+                                        <p className="text-slate-500 text-sm font-medium leading-relaxed line-clamp-2 mb-8 flex-1">{item.description || item.story}</p>
+
+                                        {/* Action Button */}
+                                        <div className="mt-auto">
                                             <button
-                                                onClick={() => handleSingleDonate(item)}
-                                                className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center group-hover:bg-orange-500 transition-all shadow-xl shadow-slate-900/10 group-hover:shadow-orange-500/30 active:scale-90"
+                                                onClick={() => navigate(`/project/${activeTab === 'needs' ? 'need' : 'campaign'}/${item._id}`)}
+                                                className="w-full py-4 bg-slate-900 group-hover:bg-orange-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-xl shadow-slate-900/10 active:scale-[0.98]"
                                             >
-                                                <ArrowRight className="w-6 h-6" />
+                                                <span>View Impact Details</span>
+                                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                             </button>
                                         </div>
                                     </div>

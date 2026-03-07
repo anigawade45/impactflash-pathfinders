@@ -112,4 +112,10 @@ export const donationApi = {
     getReceipt: async (id) => (await api.get(`/donations/receipt/${id}`, { responseType: 'blob' }))
 };
 
+export const impactApi = {
+    getMyStories: async () => (await api.get('/impact/donor-stories')).data,
+    getNgoStories: async () => (await api.get('/impact/ngo-stories')).data,
+    getStoriesByNgoId: async (ngoId) => (await api.get(`/impact/ngo-stories/${ngoId}`)).data
+};
+
 export default api;

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { donationApi } from '../../api';
+import { donationApi, impactApi } from '../../api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, ShieldCheck, TrendingUp, Download, PieChart, Heart, Award, ArrowRight, Activity, Zap, Lock, Unlock, Eye } from 'lucide-react';
+import { Wallet, ShieldCheck, TrendingUp, Download, PieChart, Heart, Award, ArrowRight, Activity, Zap, Lock, Unlock, Eye, CheckCircle2, MapPin } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function DonorDashboard() {
     const [donations, setDonations] = useState([]);
@@ -11,6 +11,7 @@ export default function DonorDashboard() {
     const [stats, setStats] = useState({ total: 0, impactScore: 0 });
     const [suggestions, setSuggestions] = useState([]);
     const [affinity, setAffinity] = useState([]);
+    const [impactStories, setImpactStories] = useState([]);
     const { user } = useAuth();
     const navigate = useNavigate();
 
@@ -30,7 +31,7 @@ export default function DonorDashboard() {
             if (res.success) {
                 // Clear URL params
                 window.history.replaceState({}, document.title, window.location.pathname);
-                alert("Donation successful! Your Impact Receipt is ready.");
+                // alert("Donation successful! Your Impact Receipt is ready.");
                 fetchDashboardData();
             }
         } catch (error) {
@@ -42,9 +43,19 @@ export default function DonorDashboard() {
         setLoading(true);
         await Promise.all([
             fetchHistory(),
-            fetchSuggestions()
+            fetchSuggestions(),
+            fetchImpactStories()
         ]);
         setLoading(false);
+    };
+
+    const fetchImpactStories = async () => {
+        try {
+            const res = await impactApi.getMyStories();
+            if (res.success) setImpactStories(res.data);
+        } catch (error) {
+            console.error("Failed to fetch impact stories");
+        }
     };
 
     const fetchHistory = async () => {
@@ -149,231 +160,310 @@ export default function DonorDashboard() {
     };
 
     return (
-        <div className="min-h-screen pt-24 pb-32 px-4 bg-slate-50 relative overflow-hidden">
+        <div className="min-h-screen pt-24 pb-32 px-6 bg-slate-50 relative overflow-hidden">
             {/* Ambient Lighting */}
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-orange-500/5 rounded-full blur-[100px] -mr-48 -mt-48 transition-transform duration-1000 hover:scale-110 pointer-events-none"></div>
+            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-orange-500/5 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[100px] -ml-48 -mb-48 pointer-events-none"></div>
 
             <div className="max-w-7xl mx-auto relative z-10">
-                <div className="flex flex-col lg:flex-row justify-between items-end gap-12 mb-20">
+                {/* Header Section */}
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-12 mb-16">
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="max-w-2xl"
                     >
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-orange-100 mb-6 shadow-xl shadow-orange-500/5">
-                            <Zap className="w-3.5 h-3.5 text-orange-500" />
-                            <span className="text-[10px] font-black text-orange-600 uppercase tracking-[0.3em]">Personal Intelligence Hub</span>
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 border border-slate-800 mb-6 shadow-2xl">
+                            <Zap className="w-3.5 h-3.5 text-orange-400" />
+                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">Personal Intelligence Hub</span>
                         </div>
-                        <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter leading-[0.9] mb-8">
-                            Hello, <br />
-                            <span className="text-gradient">{user?.name?.split(' ')[0] || 'Donor'}</span>
+                        <h1 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter leading-none mb-4 uppercase italic">
+                            Humanitarian <br />Portfolio
                         </h1>
-                        <p className="text-xl text-slate-500 font-medium leading-relaxed max-w-xl">
-                            Real-time tracking of your humanitarian portfolio. Every rupee is accounted for in our zero-trust system.
+                        <p className="text-lg text-slate-500 font-medium leading-relaxed max-w-lg">
+                            Track your capital allocation across critical impact nodes in real-time.
                         </p>
                     </motion.div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6 w-full lg:w-auto">
+                    <div className="flex flex-wrap gap-4 w-full lg:w-auto">
                         <MetricCard
-                            icon={<Wallet className="w-6 h-6" />}
-                            label="Portfolio Size"
+                            icon={<Wallet className="w-5 h-5" />}
+                            label="Portfolio"
                             value={`₹${stats.total.toLocaleString()}`}
                             color="text-slate-900"
                         />
                         <MetricCard
-                            icon={<Zap className="w-6 h-6" />}
-                            label="Impact Streak"
-                            value={`${user?.streak || 1} Months`}
-                            color="text-orange-500"
-                        />
-                        <MetricCard
-                            icon={<Activity className="w-6 h-6" />}
+                            icon={<Activity className="w-5 h-5" />}
                             label="Impact Score"
                             value={stats.impactScore}
                             color="text-indigo-500"
                         />
+                        <div className="modern-card p-6 bg-slate-900 text-white flex flex-col justify-between min-w-[200px] border-none shadow-2xl">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Active Streak</p>
+                            <div className="flex items-center gap-3">
+                                <Zap className="w-6 h-6 text-orange-400" />
+                                <span className="text-3xl font-black tracking-tighter">{user?.streak || 1} Months</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Notification Center */}
-                <div className="mb-20">
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100">
-                            <Activity className="w-6 h-6 text-orange-500" />
-                        </div>
-                        <h2 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Alerts & Milestones</h2>
-                    </div>
+                {/* Main Dashboard Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {user?.notifications && user.notifications.filter(n => !n.read).length > 0 ? (
-                            user.notifications.filter(n => !n.read).map((notif, idx) => (
-                                <motion.div
-                                    key={idx}
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className={`p-6 rounded-3xl border ${notif.type === 'milestone' ? 'bg-orange-50 border-orange-100' : 'bg-indigo-50 border-indigo-100'} relative group cursor-pointer`}
-                                    onClick={() => navigate(notif.link)}
-                                >
-                                    <div className="flex justify-between items-start mb-4">
-                                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest ${notif.type === 'milestone' ? 'bg-orange-500 text-white' : 'bg-indigo-500 text-white'}`}>
-                                            {notif.type === 'milestone' ? 'Milestone' : 'Outcome'}
-                                        </span>
-                                        <span className="text-[8px] font-bold text-slate-400">{new Date(notif.createdAt).toLocaleDateString()}</span>
-                                    </div>
-                                    <p className="text-sm font-black text-slate-800 leading-tight mb-4">{notif.message}</p>
-                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-orange-600 group-hover:gap-4 transition-all">
-                                        Take Action <ArrowRight className="w-3 h-3" />
-                                    </div>
-                                </motion.div>
-                            ))
-                        ) : (
-                            <div className="p-10 rounded-[2.5rem] border border-dashed border-slate-200 text-center flex flex-col items-center justify-center col-span-full">
-                                <ShieldCheck className="w-10 h-10 text-slate-200 mb-4" />
-                                <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Your portfolio is performing optimally. No alerts.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                    {/* Main Content Area (8 Columns) */}
+                    <div className="lg:col-span-8 space-y-16">
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                    {/* Contribution Ledger */}
-                    <div className="lg:col-span-2 space-y-8">
-                        <div className="flex items-center justify-between px-4">
-                            <h2 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Contribution Ledger</h2>
-                            <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secure Sync</span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            {donations.length > 0 ? donations.map((donation, idx) => (
-                                <motion.div
-                                    key={donation._id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.05 }}
-                                    className="modern-card p-1 group bg-white border border-slate-200 hover:border-orange-200 transition-all cursor-default"
-                                >
-                                    <div className="p-8 flex flex-col md:flex-row justify-between md:items-center gap-8">
-                                        <div className="flex items-center gap-6">
-                                            <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-900 border border-slate-100 group-hover:bg-white group-hover:shadow-xl transition-all">
-                                                <Heart className="w-8 h-8 group-hover:text-orange-500 transition-colors" />
+                        {/* Alerts Area */}
+                        {(user?.notifications && user.notifications.filter(n => !n.read).length > 0) || (user?.lastDonationDate && (new Date().getMonth() !== new Date(user.lastDonationDate).getMonth())) ? (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3 px-4">
+                                    <Activity className="w-4 h-4 text-orange-500" />
+                                    <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest">Active Alerts</h2>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {user?.lastDonationDate && (new Date().getMonth() !== new Date(user.lastDonationDate).getMonth()) && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="p-6 bg-red-50 border border-red-100 rounded-[2rem] flex items-center gap-6"
+                                        >
+                                            <div className="w-12 h-12 bg-red-500 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20">
+                                                <Zap className="w-6 h-6 text-white" />
                                             </div>
                                             <div>
-                                                <div className="flex items-center gap-3 mb-1">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">REF: #{donation._id.substring(0, 8)}</span>
-                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg uppercase tracking-tight ${donation.paymentStatus === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                                                        {donation.paymentStatus}
-                                                    </span>
+                                                <h4 className="text-xs font-black text-red-700 uppercase tracking-tight">Streak at Risk!</h4>
+                                                <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest mt-1">Maintenance required this month.</p>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                    {user?.notifications?.filter(n => !n.read).slice(0, 1).map((notif, idx) => (
+                                        <motion.div
+                                            key={idx}
+                                            className="p-6 bg-indigo-50 border border-indigo-100 rounded-[2rem] flex items-center gap-6 cursor-pointer group"
+                                            onClick={() => navigate(notif.link)}
+                                        >
+                                            <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                                                <Activity className="w-6 h-6 text-white" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="text-xs font-black text-indigo-700 uppercase tracking-tight">Node Update</h4>
+                                                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mt-1 line-clamp-1">{notif.message}</p>
+                                            </div>
+                                            <ArrowRight className="w-4 h-4 text-indigo-400 group-hover:translate-x-2 transition-transform" />
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : null}
+
+                        {/* Impact Evidence Section */}
+                        <section>
+                            <div className="flex items-center justify-between mb-8 px-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">
+                                        <Eye className="w-5 h-5 text-orange-500" />
+                                    </div>
+                                    <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">Impact Evidence</h2>
+                                </div>
+                                <Link to="/impact-stories" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-orange-500 transition-colors">View All Stories</Link>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {impactStories.length > 0 ? impactStories.slice(0, 4).map((story, idx) => (
+                                    <Link to={`/impact/${story._id}`} key={story._id} className="group">
+                                        <div className="premium-gradient-card h-full flex flex-col">
+                                            <div className="aspect-video relative overflow-hidden rounded-t-[2.4rem]">
+                                                <img src={story.photos?.[0]} alt={story.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                                                <div className="absolute inset-0 bg-linear-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+                                                <div className="absolute top-6 right-6 flex flex-col items-end gap-2">
+                                                    {story.supportedByUser && (
+                                                        <div className="px-4 py-2 bg-orange-500 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest shadow-lg shadow-orange-500/30 flex items-center gap-2">
+                                                            <Heart className="w-3.5 h-3.5 fill-white" /> Your Impact
+                                                        </div>
+                                                    )}
+                                                    <div className="px-4 py-2 bg-white/10 backdrop-blur-xl rounded-2xl text-[10px] font-black text-white uppercase tracking-widest border border-white/20 flex items-center gap-2">
+                                                        <ShieldCheck className="w-4 h-4 text-green-400" /> AI: {story.aiValidation?.score}%
+                                                    </div>
                                                 </div>
-                                                <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-2">
-                                                    Assisted {donation.items.length} Critical Node{donation.items.length > 1 ? 's' : ''}
-                                                </h3>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(donation.createdAt).toLocaleDateString()} / SECURE RELEASE</p>
+                                                <div className="absolute bottom-6 left-6 right-6">
+                                                    <h4 className="text-xl font-black text-white leading-tight uppercase tracking-tight">{story.title}</h4>
+                                                </div>
+                                            </div>
+                                            <div className="p-8 bg-white flex-1">
+                                                <div className="flex items-center justify-between mb-6">
+                                                    <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-lg">
+                                                        <MapPin className="w-3 h-3 text-slate-400" />
+                                                        <span className="text-[9px] font-black text-slate-500 uppercase">{story.ngoId?.name}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+                                                        <span className="text-[10px] font-black text-slate-900 uppercase">{story.beneficiaryCount} Beneficiaries</span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-[13px] text-slate-500 font-medium leading-relaxed italic line-clamp-2">"{story.summary}"</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                )) : (
+                                    <div className="col-span-full py-20 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center bg-white/50">
+                                        <PieChart className="w-12 h-12 text-slate-200 mb-4" />
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Pending AI outcome generation...</p>
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+
+                        {/* Contribution Ledger Section */}
+                        <section>
+                            <div className="flex items-center justify-between mb-8 px-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">
+                                        <TrendingUp className="w-5 h-5 text-indigo-500" />
+                                    </div>
+                                    <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">Active Nodes</h2>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">ledger-sync-active</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                {donations.length > 0 ? donations.map((donation, idx) => (
+                                    <motion.div
+                                        key={donation._id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        className="modern-card p-1 group bg-white border border-slate-200 hover:border-orange-200 transition-all duration-500"
+                                    >
+                                        <div className="p-8 flex flex-col md:flex-row justify-between gap-10">
+                                            <div className="flex items-center gap-8">
+                                                <div className="w-20 h-20 rounded-[2rem] bg-slate-50 flex items-center justify-center text-slate-900 border border-slate-100 group-hover:bg-slate-900 group-hover:text-white transition-all duration-700 shadow-inner">
+                                                    <Heart className="w-10 h-10" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">TXN: #{donation._id.substring(16)}</span>
+                                                        <span className="text-[10px] font-black px-3 py-1 bg-green-50 text-green-600 rounded-full uppercase italic">Verified</span>
+                                                    </div>
+                                                    <h3 className="text-3xl font-black text-slate-800 tracking-tighter leading-none mb-3">
+                                                        Assisted {donation.items.length} Outcome Node{donation.items.length > 1 ? 's' : ''}
+                                                    </h3>
+                                                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{new Date(donation.createdAt).toLocaleDateString()} · ESCROW DEPLOYED</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-row md:flex-col justify-between items-center md:items-end gap-4 min-w-[150px]">
+                                                <p className="text-4xl font-black text-slate-900 tracking-tighter">₹{donation.totalAmount.toLocaleString()}</p>
+                                                {donation.receiptGenerated && (
+                                                    <button
+                                                        onClick={() => handleDownloadReceipt(donation._id)}
+                                                        className="px-6 py-2.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center gap-3 text-slate-600 font-black text-[9px] uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all active:scale-95"
+                                                    >
+                                                        <Download className="w-4 h-4" /> Receipt
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-row md:flex-col justify-between items-center md:items-end gap-2 md:pl-8 md:border-l md:border-slate-50">
-                                            <p className="text-3xl font-black text-slate-900 tracking-tighter">₹{donation.totalAmount.toLocaleString()}</p>
-                                            {donation.receiptGenerated && (
-                                                <button
-                                                    onClick={() => handleDownloadReceipt(donation._id)}
-                                                    className="flex items-center gap-2 text-orange-600 font-black text-[10px] uppercase tracking-widest hover:underline active:scale-95 transition-all"
-                                                >
-                                                    <Download className="w-3.5 h-3.5" /> Impact Receipt
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-slate-50/50 px-8 py-6 group-hover:bg-orange-50 transition-colors border-t border-slate-50">
-                                        <div className="flex flex-col gap-6">
-                                            {donation.items.map((item, i) => (
-                                                <div key={i} className="space-y-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="w-2 h-2 rounded-full bg-orange-400"></span>
-                                                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{item.title}</span>
-                                                            <span className="text-[9px] font-bold text-slate-400">by {item.ngoId.name}</span>
+                                        <div className="bg-slate-50/50 px-8 py-8 border-t border-slate-50 rounded-b-3xl">
+                                            <div className="grid grid-cols-1 gap-8">
+                                                {donation.items.map((item, i) => (
+                                                    <div key={i} className="space-y-6">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-2 h-2 rounded-full bg-orange-500 group-hover:animate-ping"></div>
+                                                                <span className="text-sm font-black text-slate-700 uppercase tracking-tight">{item.title}</span>
+                                                                <span className="text-[10px] font-bold text-slate-400">/ via {item.ngoId.name}</span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => navigate(`/project/${(item.targetType || 'need').toLowerCase()}/${item.targetId}`)}
+                                                                className="px-4 py-1.5 bg-white border border-slate-200 rounded-xl flex items-center gap-2 shadow-sm hover:border-orange-500/30 transition-all group/escrow"
+                                                            >
+                                                                <Eye className="w-3.5 h-3.5 text-orange-500 group-hover/escrow:scale-110 transition-transform" />
+                                                                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Inspect Node</span>
+                                                            </button>
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-lg border border-slate-100">
-                                                            <Lock className="w-3 h-3 text-slate-400" />
-                                                            <span className="text-[8px] font-black text-slate-500 uppercase">Secure Escrow Trace</span>
-                                                        </div>
-                                                    </div>
 
-                                                    {/* 3-Stage Escrow Visualizer */}
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        {[
-                                                            { level: 1, label: 'Stage 1 (40%)', desc: 'Start Proof' },
-                                                            { level: 2, label: 'Stage 2 (40%)', desc: 'Mid-Point' },
-                                                            { level: 3, label: 'Stage 3 (20%)', desc: 'Final Outcome' }
-                                                        ].map((stage) => {
-                                                            const milestone = item.targetDetails?.milestones?.find(m => m.level === stage.level);
-                                                            const isReleased = milestone?.status === 'verified';
-                                                            const isSubmitted = milestone?.status === 'submitted';
+                                                        {/* Advanced Escrow Visualizer */}
+                                                        <div className="grid grid-cols-3 gap-6">
+                                                            {[
+                                                                { level: 1, label: 'Capitalization', ratio: '40%', desc: 'Start Proof' },
+                                                                { level: 2, label: 'Optimization', ratio: '40%', desc: 'Mid-Point' },
+                                                                { level: 3, label: 'Fulfillment', ratio: '20%', desc: 'Completion' }
+                                                            ].map((stage) => {
+                                                                const milestone = item.targetDetails?.milestones?.find(m => m.level === stage.level);
+                                                                const isReleased = milestone?.status === 'verified';
+                                                                const isSubmitted = milestone?.status === 'submitted';
 
-                                                            return (
-                                                                <div key={stage.level} className="relative">
-                                                                    <div className={`h-1.5 rounded-full mb-2 transition-all duration-700 ${isReleased ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]' : isSubmitted ? 'bg-orange-400 animate-pulse' : 'bg-slate-200'}`}></div>
-                                                                    <div className="flex flex-col">
-                                                                        <span className={`text-[8px] font-black uppercase tracking-tight ${isReleased ? 'text-green-600' : 'text-slate-400'}`}>{stage.label}</span>
-                                                                        <span className="text-[7px] font-bold text-slate-300 uppercase leading-none">{stage.desc}</span>
+                                                                return (
+                                                                    <div key={stage.level} className="space-y-3">
+                                                                        <div className="flex justify-between items-end">
+                                                                            <span className={`text-[9px] font-black uppercase tracking-widest ${isReleased ? 'text-green-600' : 'text-slate-400'}`}>{stage.label}</span>
+                                                                            <span className="text-[8px] font-bold text-slate-300">{stage.ratio}</span>
+                                                                        </div>
+                                                                        <div className={`h-2 rounded-full transition-all duration-1000 ${isReleased ? 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)]' : isSubmitted ? 'bg-orange-400 animate-pulse' : 'bg-slate-200'}`}></div>
+                                                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter leading-none italic">{stage.desc}</p>
                                                                     </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-
-                                                    {item.targetDetails?.fundStatus === 'frozen' && (
-                                                        <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3">
-                                                            <Activity className="w-4 h-4 text-red-500 animate-pulse" />
-                                                            <p className="text-[9px] font-black text-red-600 uppercase tracking-widest">Node Frozen: Milestone Overdue. Investigation Triggered.</p>
+                                                                );
+                                                            })}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            ))}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
+                                    </motion.div>
+                                )) : (
+                                    <div className="text-center py-32 modern-card border-dashed border-2 border-slate-200 bg-white/50 rounded-[3rem]">
+                                        <TrendingUp className="w-16 h-16 text-slate-200 mx-auto mb-6" />
+                                        <h3 className="text-2xl font-black text-slate-400 uppercase tracking-tighter italic">Ledger Empty</h3>
+                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-2">No capital deployment detected in this cycle.</p>
                                     </div>
-                                </motion.div>
-                            )) : (
-                                <div className="text-center py-32 modern-card border-dashed border-2 border-slate-200">
-                                    <PieChart className="w-16 h-16 text-slate-200 mx-auto mb-6" />
-                                    <h3 className="text-2xl font-black text-slate-400 uppercase tracking-tighter">No Active Assets</h3>
-                                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-2">Begin your humanitarian legacy today</p>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
+                        </section>
                     </div>
 
-                    <div className="space-y-10">
-                        {/* Trust Tier Card */}
+                    {/* Sidebar Column (4 Columns) */}
+                    <aside className="lg:col-span-4 space-y-12">
+
+                        {/* Trust Profile Card */}
                         <motion.div
-                            whileHover={{ y: -5 }}
-                            className="modern-card p-10 bg-slate-900 text-white relative overflow-hidden group border-none"
+                            whileHover={{ y: -8 }}
+                            className="p-10 bg-slate-900 rounded-[3rem] text-white relative overflow-hidden group border border-slate-800 shadow-3xl"
                         >
                             <div className="absolute inset-0 noise-bg opacity-10"></div>
-                            <div className={`absolute top-0 right-0 w-48 h-48 ${tier.color}/20 rounded-full blur-[80px] -mr-24 -mt-24 group-hover:scale-125 transition-transform duration-1000`}></div>
+                            <div className={`absolute top-0 right-0 w-64 h-64 ${tier.color}/20 rounded-full blur-[100px] -mr-32 -mt-32 transition-transform duration-1000 group-hover:scale-150`}></div>
 
-                            <div className="text-4xl mb-8">{tier.icon}</div>
-                            <h3 className="text-2xl font-black tracking-tight mb-4 uppercase">Trust Profile</h3>
-                            <p className="text-sm text-slate-400 font-medium mb-10 leading-relaxed">
-                                Your account is currently at <span className="text-white">{tier.name}</span>.
-                                {stats.total < 10000 ? " Contribute ₹" + (10000 - stats.total).toLocaleString() + " more to reach Tier 2." : " Impact reports and receipts are now priority processed."}
+                            <div className="flex justify-between items-start mb-10">
+                                <div className="text-5xl">{tier.icon}</div>
+                                <div className="p-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
+                                    <ShieldCheck className="w-6 h-6 text-indigo-400" />
+                                </div>
+                            </div>
+
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4">Portfolio Tier</p>
+                            <h3 className="text-3xl font-black tracking-tighter mb-6 uppercase italic leading-none">{tier.name}</h3>
+
+                            <p className="text-sm text-slate-400 font-medium mb-12 leading-relaxed">
+                                {stats.total < 10000
+                                    ? `Acquire Tier 2 status by deploying ₹${(10000 - stats.total).toLocaleString()} additional capital.`
+                                    : "Priority AI verification and premium outcome reports are active for your node."
+                                }
                             </p>
 
-                            <div className="space-y-6">
-                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                                    <span className="text-slate-400">Progress to Next Tier</span>
-                                    <span className="text-orange-500">{tier.progress}% Complete</span>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Progress</span>
+                                    <span className="text-xl font-black text-orange-400 tracking-tighter">{tier.progress}%</span>
                                 </div>
-                                <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden p-0.5 border border-white/5">
+                                <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden p-1 border border-white/10">
                                     <motion.div
                                         initial={{ width: 0 }}
                                         animate={{ width: `${tier.progress}%` }}
-                                        transition={{ duration: 1.5, delay: 0.5 }}
-                                        className={`${tier.color} h-full rounded-full shadow-[0_0_20px_rgba(249,115,22,0.4)]`}
+                                        transition={{ duration: 2, delay: 0.5 }}
+                                        className={`${tier.color} h-full rounded-full shadow-[0_0_20px_rgba(249,115,22,0.5)]`}
                                     ></motion.div>
                                 </div>
                             </div>
@@ -381,86 +471,77 @@ export default function DonorDashboard() {
 
                         {/* AI Recommendations */}
                         {suggestions.length > 0 && (
-                            <div className="modern-card p-10 bg-white border border-slate-200">
-                                <div className="flex items-center gap-4 mb-8">
+                            <div className="p-10 bg-white rounded-[3rem] border border-slate-200 shadow-xl shadow-slate-200/50">
+                                <div className="flex items-center gap-4 mb-10">
                                     <div className="p-3 bg-orange-50 rounded-2xl">
                                         <Zap className="w-6 h-6 text-orange-500" />
                                     </div>
-                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">AI MATCHES</h3>
+                                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">AI Matching</h3>
                                 </div>
-                                <div className="space-y-4">
+                                <div className="space-y-6">
                                     {suggestions.map((item, i) => (
-                                        <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-orange-200 transition-all cursor-pointer group" onClick={() => navigate(`/projects/${item.targetId}`)}>
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className="text-[8px] font-black px-2 py-0.5 bg-white rounded border border-slate-200 text-slate-400 uppercase tracking-widest">Recommended</span>
-                                                <span className="text-[10px] font-black text-orange-600">{item.percentage}% Fit</span>
+                                        <motion.div
+                                            key={i}
+                                            whileHover={{ x: 10 }}
+                                            className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 hover:border-orange-200 transition-all cursor-pointer group"
+                                            onClick={() => navigate(`/project/${(item.targetType || 'need').toLowerCase()}/${item.targetId}`)}
+                                        >
+                                            <div className="flex justify-between items-center mb-4">
+                                                <span className="text-[9px] font-black px-3 py-1 bg-white rounded-lg border border-slate-200 text-slate-400 uppercase tracking-widest">Target Node</span>
+                                                <span className="text-xs font-black text-orange-600">{item.percentage}% Fit</span>
                                             </div>
-                                            <h4 className="text-sm font-black text-slate-800 leading-tight mb-1 group-hover:text-orange-600 transition-colors">{item.title}</h4>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">by {item.ngoName}</p>
-                                        </div>
+                                            <h4 className="text-base font-black text-slate-800 leading-tight mb-2 group-hover:text-orange-600 transition-colors uppercase italic">{item.title}</h4>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">/ {item.ngoName}</p>
+                                        </motion.div>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {/* Streak Risk Alert */}
-                        {user?.lastDonationDate && (new Date().getMonth() !== new Date(user.lastDonationDate).getMonth()) && (
-                            <motion.div
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="modern-card p-8 bg-red-50 border border-red-100 flex items-center gap-6"
-                            >
-                                <div className="p-3 bg-red-500 rounded-2xl shadow-lg shadow-red-500/20">
-                                    <Zap className="w-6 h-6 text-white" />
+                        {/* Cause Affinity Visualization */}
+                        <div className="p-10 bg-white rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-100/30">
+                            <div className="flex items-center gap-4 mb-12">
+                                <div className="p-3 bg-indigo-50 rounded-2xl">
+                                    <PieChart className="w-6 h-6 text-indigo-500" />
                                 </div>
-                                <div>
-                                    <h4 className="text-sm font-black text-red-700 uppercase tracking-tight">Streak at Risk!</h4>
-                                    <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest leading-relaxed">
-                                        Donate this month to maintain your {user?.streak || 1}-month impact streak.
-                                    </p>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* Annual Impact Report */}
-                        <div className="modern-card p-10 bg-indigo-900 text-white relative overflow-hidden group border-none">
-                            <div className="absolute inset-0 noise-bg opacity-10"></div>
-                            <Award className="w-12 h-12 mb-8 text-indigo-400" />
-                            <h3 className="text-2xl font-black tracking-tight mb-4 uppercase">2026 Impact Report</h3>
-                            <p className="text-sm text-indigo-200 font-medium mb-10 leading-relaxed">
-                                Your collective contributions have fueled significant change this year. View your personalized summary.
-                            </p>
-                            <button className="w-full py-5 rounded-3xl bg-white/10 hover:bg-white/20 transition-all text-white text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 flex items-center justify-center gap-3">
-                                Generate Report <PieChart className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        {/* Cause Affinity */}
-                        <div className="modern-card p-10 bg-white border border-slate-100">
-                            <div className="flex items-center gap-4 mb-10">
-                                <div className="p-3 bg-slate-50 rounded-2xl">
-                                    <TrendingUp className="w-6 h-6 text-slate-900" />
-                                </div>
-                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Cause Affinity</h3>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Cause Affinity</h3>
                             </div>
 
-                            <div className="space-y-8">
-                                {affinity.map((item, i) => (
-                                    <AffinityBar key={i} icon={item.icon} label={item.label} percentage={item.percentage} color={i === 0 ? "bg-orange-500" : "bg-slate-900"} />
-                                ))}
-                                {affinity.length === 0 && (
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center py-4">No data mapped yet</p>
+                            <div className="space-y-10">
+                                {affinity.length > 0 ? affinity.map((item, i) => (
+                                    <AffinityBar
+                                        key={i}
+                                        icon={item.icon}
+                                        label={item.label}
+                                        percentage={item.percentage}
+                                        color={i === 0 ? "bg-orange-500" : "bg-slate-900"}
+                                    />
+                                )) : (
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center py-10 italic">Analysis in progress...</p>
                                 )}
                             </div>
 
                             <button
-                                onClick={() => window.location.href = '/explore'}
-                                className="w-full mt-10 py-5 rounded-3xl bg-slate-50 text-slate-900 text-xs font-black uppercase tracking-widest hover:bg-slate-100 active:scale-95 transition-all text-center flex items-center justify-center gap-3"
+                                onClick={() => navigate('/explore')}
+                                className="w-full mt-12 py-6 rounded-[2rem] bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.3em] hover:bg-orange-500 hover:shadow-2xl hover:shadow-orange-500/30 transition-all active:scale-95 flex items-center justify-center gap-4 group"
                             >
-                                Distribute More <ArrowRight className="w-4 h-4" />
+                                Optimize Portfolio <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
                             </button>
                         </div>
-                    </div>
+
+                        {/* Annual Report Access */}
+                        <div className="p-10 bg-indigo-900 rounded-[3rem] text-white relative overflow-hidden group border-none shadow-3xl">
+                            <div className="absolute inset-0 noise-bg opacity-10"></div>
+                            <Award className="w-16 h-16 mb-10 text-indigo-300" />
+                            <h3 className="text-3xl font-black tracking-tighter mb-6 uppercase italic">Impact Summary</h3>
+                            <p className="text-sm text-indigo-200/80 font-medium mb-12 leading-relaxed">
+                                Deploy your personalized 2026 humanitarian audit. Deep analysis of your social capital ROI.
+                            </p>
+                            <button className="w-full py-6 rounded-3xl bg-white/5 backdrop-blur-xl hover:bg-white/10 transition-all text-white text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 flex items-center justify-center gap-3 group">
+                                Generate Audit <Download className="w-4 h-4 group-hover:animate-bounce" />
+                            </button>
+                        </div>
+                    </aside>
                 </div>
             </div>
         </div>
@@ -471,33 +552,35 @@ function MetricCard({ icon, label, value, color }) {
     return (
         <motion.div
             whileHover={{ y: -5 }}
-            className="modern-card p-8 bg-white border border-slate-100 min-w-[220px] group"
+            className="modern-card p-6 bg-white border border-slate-100 min-w-[180px] group flex flex-col justify-between"
         >
-            <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 mb-6 group-hover:text-orange-500 group-hover:bg-orange-50 transition-all duration-500">
+            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 mb-6 group-hover:text-orange-500 group-hover:bg-orange-50 transition-all duration-500 shadow-inner">
                 {icon}
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-            <p className={`text-4xl font-black ${color} tracking-tighter`}>{value}</p>
+            <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+                <p className={`text-3xl font-black ${color} tracking-tighter whitespace-nowrap`}>{value}</p>
+            </div>
         </motion.div>
     );
 }
 
 function AffinityBar({ icon, label, percentage, color }) {
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 group">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <span className="text-xl">{icon}</span>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+                <div className="flex items-center gap-4">
+                    <span className="text-2xl group-hover:scale-125 transition-transform">{icon}</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
                 </div>
-                <span className="text-xs font-black text-slate-900">{percentage}%</span>
+                <span className="text-lg font-black text-slate-900 tracking-tighter">{percentage}%</span>
             </div>
-            <div className="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden">
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden p-0.5 border border-slate-200">
                 <motion.div
                     initial={{ width: 0 }}
                     whileInView={{ width: `${percentage}%` }}
-                    transition={{ duration: 1, delay: 0.2 }}
-                    className={`${color} h-full rounded-full`}
+                    transition={{ duration: 1.5, delay: 0.2 }}
+                    className={`${color} h-full rounded-full shadow-[0_0_10px_rgba(0,0,0,0.1)]`}
                 ></motion.div>
             </div>
         </div>
