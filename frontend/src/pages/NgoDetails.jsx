@@ -97,6 +97,7 @@ export default function NgoDetails() {
                             {[
                                 { label: 'FCRA Search', status: ngo.automatedChecks?.fcraVerified, sub: 'MHA Database' },
                                 { label: 'PAN Identity', status: ngo.automatedChecks?.panVerified, sub: 'Income Tax API' },
+                                { label: 'Aadhaar Identity', status: ngo.automatedChecks?.aadhaarVerified, sub: 'UIDAI OTP' },
                                 { label: 'Bank Penny Drop', status: ngo.automatedChecks?.pennyDropSuccessful, sub: 'NPCI Network' },
                                 { label: 'Vision AI Scan', status: ngo.automatedChecks?.visionAuthentic, sub: 'Tamper Detection' },
                                 { label: 'Geo Address', status: ngo.automatedChecks?.addressMatched, sub: 'FCRA Cross-check' },

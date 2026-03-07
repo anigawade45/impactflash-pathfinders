@@ -19,6 +19,7 @@ import TransparencyLedger from './pages/TransparencyLedger';
 import ImpactFeed from './pages/ImpactFeed';
 import ProjectDetails from './pages/ProjectDetails';
 import NgoDetails from './pages/NgoDetails';
+import ImpactStoryDetails from './pages/ImpactStoryDetails';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/ledger" element={<TransparencyLedger />} />
             <Route path="/impact-stories" element={<ImpactFeed />} />
+            <Route path="/impact/:id" element={<ImpactStoryDetails />} />
             <Route
               path="/explore"
               element={
