@@ -108,6 +108,34 @@ exports.getPublicStories = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// 7. Individual Impact Story Detail
+exports.getPublicStoryById = async (req, res) => {
+    try {
+        const story = await ImpactStory.findById(req.params.id).populate('ngoId', 'name email trustScore impactScore address');
+        if (!story) return res.status(404).json({ success: false, message: 'Story not found.' });
+
+        // Optionally fetch original project for extra context
+        let originalProject = null;
+        if (story.itemType === 'Need') {
+            originalProject = await Need.findById(story.itemId);
+        } else {
+            originalProject = await Campaign.findById(story.itemId);
+        }
+
+        const sanitized = {
+            ...story._doc,
+            originalProject,
+            donors: story.donors.map(d => ({
+                name: d.isAnonymous ? 'Anonymous Donor' : d.name
+            }))
+        };
+
+        res.status(200).json({ success: true, data: sanitized });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
 // 7. Specific Need by ID
 exports.getNeedById = async (req, res) => {
     try {

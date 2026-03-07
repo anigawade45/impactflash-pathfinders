@@ -10,5 +10,6 @@ router.post('/submit-proof', protect, authorize('ngo'), escrowController.submitM
 router.post('/verify', protect, authorize('admin'), escrowController.verifyMilestone);
 router.post('/freeze', protect, authorize('admin'), escrowController.freezeEscrow);
 router.post('/refund', protect, authorize('admin'), escrowController.processRefunds);
+router.post('/check-overdue', protect, authorize('admin'), escrowController.checkOverdueMilestones);
 
 module.exports = router;

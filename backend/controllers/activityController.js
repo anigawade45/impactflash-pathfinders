@@ -6,26 +6,18 @@ const axios = require('axios');
 
 const AI_ENGINE_URL = 'http://127.0.0.1:8000/api/score';
 
-const determineStatus = (score, fraudFlag, trustScore) => {
+const determineStatus = (score, fraudFlag) => {
+    // 1. Score < 50 OR High Fraud -> Auto Reject
     if (fraudFlag || score < 50) {
         return 'rejected';
     }
 
-    // Trust Level: High (80+) -> Fast track
-    if (trustScore >= 80 && score >= 70) {
-        return 'live';
-    }
-
-    // Trust Level: Mid (40-60) -> Every need manually reviewed
-    if (trustScore <= 60) {
-        return 'in_review';
-    }
-
-    // Trust Level: Normal (60-80) -> Normal AI scoring
+    // 2. Score >= 85 + Low Fraud -> Auto Approve
     if (score >= 85) {
         return 'live';
     }
 
+    // 3. Score 50-84 OR Medium Risk -> Admin Queue
     return 'in_review';
 };
 
@@ -46,28 +38,36 @@ exports.submitNeed = async (req, res) => {
             });
         }
 
-        // 1. Get AI Score and Document Verification
+        // 1. Get AI Score with 22-attribute protocol simulation
         const aiResponse = await axios.post(AI_ENGINE_URL, {
             type: 'need',
+            title,
             urgency,
             category,
             amount,
             beneficiaries,
-            image_url: documents[0] || null // Send the first document for AI vision check
+            ngo_trust: ngo.trustScore, // Pass trust score for contextual anomaly layer
+            image_url: documents[0] || null
         });
 
-        const { score, verdict, why_high, why_not_higher, fraud_status, one_flag, suggestion, fraudFlag, visionAuthentic, aiRecommendationPoints } = aiResponse.data;
+        const {
+            score,
+            verdict,
+            why_high,
+            why_not_higher,
+            fraud_status,
+            one_flag,
+            suggestion,
+            fraudFlag,
+            visionAuthentic,
+            aiRecommendationPoints,
+            shap_summary
+        } = aiResponse.data;
 
-        // 2. Determine workflow status with Trust Score factor
-        // If AI vision failed but was required for high urgency, flag it
-        let finalStatus = determineStatus(score, fraudFlag, ngo.trustScore);
+        // 2. Determine workflow status with strict AI thresholds
+        let finalStatus = determineStatus(score, fraudFlag);
 
-        // If document was provided but AI said it's fake, force review
-        if (documents.length > 0 && visionAuthentic === false) {
-            finalStatus = 'in_review';
-        }
-
-        // Layer 4: 5% Random Spot Check
+        // Layer 4: 5% Random Spot Check (Overrides auto-approve)
         const isSpotCheck = Math.random() < 0.05;
 
         // 3. Save Need
@@ -87,10 +87,11 @@ exports.submitNeed = async (req, res) => {
             aiFraudStatus: fraud_status,
             aiSuggestion: suggestion,
             aiRecommendationPoints,
-            explanation: `${verdict}: ${why_high}. ${one_flag}`,
+            aiShapSummary: shap_summary,
+            explanation: `${verdict}: ${why_high}. Flags: ${one_flag}`,
             fraudFlag,
-            visionAuthentic,
-            status: isSpotCheck ? 'in_review' : finalStatus,
+            visionAuthentic: !!visionAuthentic,
+            status: isSpotCheck && finalStatus === 'live' ? 'in_review' : finalStatus,
             isSpotCheck,
             milestones: [
                 { level: 1, title: 'Initiation', percentage: 40, status: 'pending' },
@@ -151,13 +152,25 @@ exports.createCampaign = async (req, res) => {
             story,
             category: category || 'Social',
             targetAmount,
+            ngo_trust: ngo.trustScore,
             image_url: photos[0] || documents[0] || null
         });
 
-        const { score, verdict, why_high, why_not_higher, fraud_status, isolation_forest, one_flag, suggestion, fraudFlag, aiRecommendationPoints } = aiResponse.data;
+        const {
+            score,
+            verdict,
+            why_high,
+            why_not_higher,
+            fraud_status,
+            one_flag,
+            suggestion,
+            fraudFlag,
+            aiRecommendationPoints,
+            shap_summary
+        } = aiResponse.data;
 
-        // 2. Determine workflow status with Trust Score factor
-        const status = determineStatus(score, fraudFlag, ngo.trustScore);
+        // 2. Determine workflow status with strict AI thresholds
+        let finalStatus = determineStatus(score, fraudFlag);
 
         // Layer 4: 5% Random Spot Check
         const isSpotCheck = Math.random() < 0.05;
@@ -180,9 +193,10 @@ exports.createCampaign = async (req, res) => {
             aiOneFlag: one_flag,
             aiSuggestion: suggestion,
             aiRecommendationPoints,
-            explanation: `${verdict}: ${why_high}. ${one_flag}`,
+            aiShapSummary: shap_summary,
+            explanation: `${verdict}: ${why_high}. Flags: ${one_flag}`,
             fraudFlag,
-            status: isSpotCheck ? 'in_review' : status,
+            status: isSpotCheck && finalStatus === 'live' ? 'in_review' : finalStatus,
             isSpotCheck,
             milestones: [
                 { level: 1, title: 'Initiation', percentage: 40, status: 'pending' },

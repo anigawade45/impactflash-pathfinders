@@ -9,6 +9,9 @@ router.post('/register', upload.single('registrationCertificate'), ngoController
 // POST /api/ngos/verify-pan
 router.post('/verify-pan', ngoController.verifyPan);
 
+// POST /api/ngos/verify-aadhaar
+router.post('/verify-aadhaar', ngoController.verifyAadhaar);
+
 // GET /api/ngos/:id
 router.get('/:id', ngoController.getNgoById);
 

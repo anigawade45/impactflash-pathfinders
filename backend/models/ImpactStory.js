@@ -18,7 +18,8 @@ const impactStorySchema = new mongoose.Schema({
     donors: [{
         name: { type: String },
         isAnonymous: { type: Boolean, default: true }
-    }]
+    }],
+    aiValidation: { type: Object }
 }, { timestamps: true });
 
 module.exports = mongoose.model('ImpactStory', impactStorySchema);
