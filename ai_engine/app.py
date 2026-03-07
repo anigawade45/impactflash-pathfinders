@@ -22,16 +22,17 @@ def get_score():
 @app.route('/api/suggest-split', methods=['POST'])
 def suggest_split():
     """
-    Input: { amount: float, candidates: [{_id, aiScore, urgency, type, title}] }
+    Input: { amount: float, candidates: [...], donor_causes: [...] }
     """
     data = request.json
     donation_amount = data.get('amount')
     candidates = data.get('candidates', [])
+    donor_causes = data.get('donor_causes', [])
     
     if not donation_amount or not candidates:
         return jsonify({"success": False, "message": "Missing input data"}), 400
         
-    splits = engine.suggest_optimal_split(donation_amount, candidates)
+    splits = engine.suggest_optimal_split(donation_amount, candidates, donor_causes)
     return jsonify({
         "success": True,
         "splits": splits
@@ -67,6 +68,42 @@ def verify_document():
         
     result = engine.check_document_authenticity(url, doc_type, reg_data)
     return jsonify(result)
+
+@app.route('/api/verify-outcome', methods=['POST'])
+def verify_outcome():
+    """
+    Input: { image_url: "...", promised_data: {...}, delivered_data: {...}, project_title: "..." }
+    """
+    data = request.json
+    url = data.get('image_url')
+    promised = data.get('promised_data', {})
+    delivered = data.get('delivered_data', {})
+    title = data.get('project_title')
+
+    if not url or not promised or not delivered:
+        return jsonify({"success": False, "message": "Missing required outcome data"}), 400
+        
+    result = engine.verify_impact_outcome(url, promised, delivered, title)
+    return jsonify(result)
+
+@app.route('/api/retrain', methods=['POST'])
+def retrain_model():
+    """
+    Input: { outcome_data: { ngo_id: ..., success_rate: ..., completion_time: ... } }
+    """
+    data = request.json
+    outcome = data.get('outcome_data')
+    if not outcome:
+        return jsonify({"success": False, "message": "Missing outcome data"}), 400
+        
+    # Trigger model refinement logic in engine
+    engine.refine_model_from_outcome(outcome)
+    
+    return jsonify({
+        "success": True,
+        "message": "Feedback loop closed. Model updated with outcome data.",
+        "new_trust_delta": "+5" if outcome.get('status') == 'success' else "-10"
+    })
 
 @app.route('/api/match-causes', methods=['POST'])
 def match_causes():
