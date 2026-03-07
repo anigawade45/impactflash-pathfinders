@@ -28,6 +28,10 @@ export const authApi = {
         const response = await api.post('/ngos/verify-pan', { panCard, name });
         return response.data;
     },
+    verifyAadhaar: async (aadhaarNumber, representativeName) => {
+        const response = await api.post('/ngos/verify-aadhaar', { aadhaarNumber, representativeName });
+        return response.data;
+    },
     registerDonor: async (data) => {
         const response = await api.post('/donors/register', data);
         return response.data;
@@ -96,7 +100,8 @@ export const publicApi = {
     getNeedById: async (id) => (await api.get(`/public/needs/${id}`)).data,
     getCampaignById: async (id) => (await api.get(`/public/campaigns/${id}`)).data,
     getAuditLogs: async () => (await api.get('/public/audit-logs')).data,
-    getStories: async () => (await api.get('/public/impact-stories')).data
+    getStories: async () => (await api.get('/public/impact-stories')).data,
+    getStoryById: async (id) => (await api.get(`/public/impact-stories/${id}`)).data
 };
 
 export const donationApi = {
@@ -104,7 +109,7 @@ export const donationApi = {
     initiate: async (data) => (await api.post('/donations/initiate', data)).data,
     verify: async (data) => (await api.post('/donations/verify', data)).data,
     getHistory: async () => (await api.get('/donations/my-donations')).data,
-    getReceipt: async (id) => (await api.get(`/donations/receipt/${id}`)).data
+    getReceipt: async (id) => (await api.get(`/donations/receipt/${id}`, { responseType: 'blob' }))
 };
 
 export default api;

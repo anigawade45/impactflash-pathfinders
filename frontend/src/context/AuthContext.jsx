@@ -79,8 +79,16 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const verifyAadhaar = async (aadhaarNumber, representativeName) => {
+        try {
+            return await authApi.verifyAadhaar(aadhaarNumber, representativeName);
+        } catch (error) {
+            throw new Error(error.response?.data?.message || 'Aadhaar Verification failed');
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, registerDonor, verifyPan, logout, checkAuth }}>
+        <AuthContext.Provider value={{ user, loading, login, register, registerDonor, verifyPan, verifyAadhaar, logout, checkAuth }}>
             {children}
         </AuthContext.Provider>
     );

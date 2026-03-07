@@ -20,6 +20,12 @@ const campaignSchema = new mongoose.Schema({
     aiOneFlag: { type: String },
     aiSuggestion: { type: String },
     aiRecommendationPoints: [{ type: String }],
+    aiShapSummary: [
+        {
+            feature: { type: String },
+            impact: { type: String }
+        }
+    ],
     isSpotCheck: { type: Boolean, default: false }, // Layer 4: 5% random check
     lastReviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     approvals: [
@@ -49,7 +55,13 @@ const campaignSchema = new mongoose.Schema({
             proof: { type: String },
             outcomeReport: { type: String },
             adminFeedback: { type: String },
-            releasedAt: { type: Date }
+            releasedAt: { type: Date },
+            aiOutcomeCheck: {
+                status: { type: String },
+                score: { type: Number },
+                analysis: { type: String },
+                fidelityMetrics: { type: Object }
+            }
         }
     ]
 }, { timestamps: true });

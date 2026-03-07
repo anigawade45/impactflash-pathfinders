@@ -24,7 +24,11 @@
     "multer": "^1.4.5-lts.1",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemon": "^3.1.14",
+<<<<<<< HEAD
+    "pdfkit": "^0.17.2",
+=======
     "razorpay": "^2.9.6",
+>>>>>>> af802fe1bd5d81bc50fa91971fdf151ee33a15dd
     "stripe": "^20.4.0"
   }
 }

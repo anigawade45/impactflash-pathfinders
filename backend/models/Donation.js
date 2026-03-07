@@ -17,9 +17,6 @@ const donationSchema = new mongoose.Schema({
         enum: ['pending', 'completed', 'failed'],
         default: 'pending'
     },
-    razorpayOrderId: { type: String },
-    razorpayPaymentId: { type: String },
-    razorpaySignature: { type: String },
     stripeSessionId: { type: String },
     stripePaymentIntentId: { type: String },
     visibility: {

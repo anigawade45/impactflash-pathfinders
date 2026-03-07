@@ -168,9 +168,30 @@ export default function AdminDashboard() {
                                                     <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Milestone {m?.level} Evidence</p>
                                                     <a href={m?.proof} target="_blank" className="text-blue-600 font-bold text-sm block mb-2 hover:underline">View Proof Document 🔗</a>
                                                     {m?.level === 3 && (
-                                                        <div className="mt-4 p-3 bg-white rounded-xl border border-blue-100 text-xs text-slate-600 italic">
-                                                            "{m?.outcomeReport}"
-                                                        </div>
+                                                        <>
+                                                            <div className="mt-4 p-3 bg-white rounded-xl border border-blue-100 text-xs text-slate-600 italic">
+                                                                "{m?.outcomeReport}"
+                                                            </div>
+                                                            {m?.aiOutcomeCheck && (
+                                                                <div className={`mt-4 p-4 rounded-2xl border-2 ${m.aiOutcomeCheck.status === 'VERIFIED' ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-200'}`}>
+                                                                    <div className="flex justify-between items-center mb-2">
+                                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">AI Story Audit</p>
+                                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${m.aiOutcomeCheck.status === 'VERIFIED' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                                                                            {m.aiOutcomeCheck.status || 'PENDING'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-xs font-bold text-slate-700 leading-tight mb-2">{m.aiOutcomeCheck.analysis}</p>
+                                                                    <div className="flex gap-4">
+                                                                        {m.aiOutcomeCheck.fidelityMetrics && Object.entries(m.aiOutcomeCheck.fidelityMetrics).map(([key, val]) => (
+                                                                            <div key={key}>
+                                                                                <p className="text-[8px] font-bold text-slate-400 uppercase">{key}</p>
+                                                                                <p className="text-[10px] font-black text-slate-800">{val}</p>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
@@ -196,7 +217,7 @@ export default function AdminDashboard() {
                             {[...pending.needs.map(n => ({ ...n, type: 'need' })), ...pending.campaigns.map(c => ({ ...c, type: 'campaign' }))].map(item => (
                                 <div key={item._id} className="modern-card p-0 bg-white border border-slate-100 flex flex-col group hover:shadow-xl transition-all duration-300 overflow-hidden">
                                     <div className={`px-4 py-2 flex justify-between items-center ${item.aiVerdict?.includes('APPROVED') ? 'bg-green-500' :
-                                            item.aiVerdict?.includes('FLAGGED') ? 'bg-red-500' : 'bg-slate-800'
+                                        item.aiVerdict?.includes('FLAGGED') ? 'bg-red-500' : 'bg-slate-800'
                                         }`}>
                                         <p className="text-[8px] font-black text-white uppercase tracking-widest">{item.aiVerdict || 'PENDING'}</p>
                                         <p className="text-[10px] font-black text-white">{item.aiScore}/100</p>

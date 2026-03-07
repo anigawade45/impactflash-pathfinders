@@ -5,27 +5,22 @@ const generateToken = require('../utils/generateToken');
 
 exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, role } = req.body;
         const normalizedEmail = email.trim().toLowerCase();
 
-        // 1. Check if Admin (New separate collection)
-        let user = await Admin.findOne({ email: normalizedEmail });
-        let role = user ? 'admin' : null;
-
-        if (!user) {
-            // 2. Check if NGO
+        let user;
+        if (role === 'admin') {
+            user = await Admin.findOne({ email: normalizedEmail });
+        } else if (role === 'ngo') {
             user = await NGO.findOne({ email: normalizedEmail });
-            role = user ? 'ngo' : null;
-        }
-
-        if (!user) {
-            // 3. Check if Donor
+        } else if (role === 'donor') {
             user = await Donor.findOne({ email: normalizedEmail });
-            role = user ? 'donor' : null;
+        } else {
+            return res.status(400).json({ success: false, message: 'Invalid role specified.' });
         }
 
         if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found. Please register first.' });
+            return res.status(404).json({ success: false, message: `No ${role} account found with this email.` });
         }
 
         // Check password

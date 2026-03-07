@@ -143,6 +143,37 @@ export default function ProjectDetails() {
                         </div>
                     </div>
 
+                    {/* AI Decision Matrix (SHAP Simulation) */}
+                    <div>
+                        <div className="flex justify-between items-center mb-6">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">AI Decision Matrix / SHAP Breakdown</h4>
+                            <span className="text-[8px] font-black text-indigo-500 uppercase px-2 py-1 bg-indigo-50 rounded-md border border-indigo-100 italic">Gradient Boosting Feature Importance</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100">
+                            {(project.aiShapSummary && project.aiShapSummary.length > 0 ? project.aiShapSummary : [
+                                { feature: 'Urgency Heuristics', impact: '+25' },
+                                { feature: 'NGO Trust History', impact: '+15' },
+                                { feature: 'Vision AI Confidence', impact: '+10' },
+                                { feature: 'Category Cost Normals', impact: '+5' },
+                                { feature: 'Fraud Pattern Match', impact: '-5' },
+                                { feature: 'Beneficiary Validation', impact: '+10' }
+                            ]).map((feature, i) => (
+                                <div key={i} className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">{feature.feature}</p>
+                                        <p className={`text-[10px] font-black ${feature.impact.includes('-') ? 'text-red-500' : 'text-green-500'}`}>{feature.impact} pts</p>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full rounded-full ${feature.impact.includes('-') ? 'bg-red-400' : 'bg-indigo-500'}`}
+                                            style={{ width: `${Math.abs(parseInt(feature.impact)) * 2}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Fraud Detection & Recommendation */}
                     <div className={`p-8 rounded-[2.5rem] border-2 border-dashed ${project.aiFraudStatus === 'HIGH RISK' ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
                         <div className="flex justify-between items-center mb-6">

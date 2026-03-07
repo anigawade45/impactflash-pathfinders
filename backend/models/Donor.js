@@ -5,7 +5,7 @@ const donorSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    panCard: { type: String }, // Required for 80G and fraud check
+    panCard: { type: String }, // Required for tax compliance and fraud check
     causes: [{ type: String }], // e.g., ['Health', 'Education', 'Environment']
     conflicts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'NGO' }],
     defaultVisibility: {
@@ -13,7 +13,16 @@ const donorSchema = new mongoose.Schema({
         enum: ['public', 'anonymous', 'ngo_only'],
         default: 'anonymous'
     },
-    role: { type: String, default: 'donor' }
+    role: { type: String, default: 'donor' },
+    streak: { type: Number, default: 0 },
+    lastDonationDate: { type: Date },
+    notifications: [{
+        type: { type: String }, // 'milestone', 'outcome', 'streak_risk'
+        message: { type: String },
+        link: { type: String },
+        read: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now }
+    }]
 }, { timestamps: true });
 
 donorSchema.pre('save', async function () {
